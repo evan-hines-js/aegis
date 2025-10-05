@@ -1,0 +1,22 @@
+<Layouts.app flash={@flash}>
+  <div class="mx-auto max-w-md text-center">
+    <div class="mb-8">
+      <.icon name="hero-shield-exclamation" class="w-16 h-16 mx-auto text-red-500" />
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-900 mb-4">Access Denied</h1>
+
+    <p class="text-lg text-gray-600 mb-8">
+      You don't have permission to access the admin interface.
+    </p>
+
+    <div class="space-y-4">
+      <.link
+        href={~p"/"}
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        <.icon name="hero-home" class="w-4 h-4 mr-2" /> Return Home
+      </.link>
+    </div>
+  </div>
+</Layouts.app>

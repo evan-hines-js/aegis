@@ -1,0 +1,494 @@
+<Layouts.admin
+  flash={@flash}
+  current_user={@current_user}
+  current_page={@current_page}
+  page_title={@page_title}
+>
+  <div class="space-y-6">
+    <.page_header description="Manage MCP clients and their permissions. Clients use API keys to authenticate with the system.">
+      <:action>
+        <.action_button icon="hero-plus" color="blue" click="show_form">
+          Create Client
+        </.action_button>
+      </:action>
+    </.page_header>
+
+    <.modal show={@show_form} on_cancel="hide_form">
+      <:title>
+        {if @form_mode == :edit, do: "Edit Client", else: "Create New Client"}
+      </:title>
+      <:body>
+        <.form
+          for={%{}}
+          phx-submit={if @form_mode == :edit, do: "update_client", else: "create_client"}
+          id="client-form"
+          class="space-y-4"
+        >
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <.input
+              type="text"
+              name="client[name]"
+              label="Client Name"
+              placeholder="e.g., Production API Client"
+              value={if @editing_client, do: @editing_client.name, else: ""}
+              required
+            />
+            <.input
+              type="text"
+              name="client[description]"
+              label="Description"
+              placeholder="Purpose or owner of this client"
+              value={if @editing_client, do: @editing_client.description || "", else: ""}
+            />
+          </div>
+
+          <.form_section title="Authentication Configuration">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  for="client_auth_type"
+                  class="block text-sm font-medium leading-6 text-gray-900"
+                >
+                  Authentication Type
+                </label>
+                <select
+                  id="client_auth_type"
+                  name="client[auth_type]"
+                  phx-change="auth_type_changed"
+                  class="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm sm:leading-6"
+                >
+                  <option
+                    value="api_key"
+                    selected={!@editing_client || @editing_client.auth_type == :api_key}
+                  >
+                    API Key (default)
+                  </option>
+                  <option
+                    value="oauth"
+                    selected={@editing_client && @editing_client.auth_type == :oauth}
+                  >
+                    OAuth 2.0
+                  </option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500">
+                  API Key: Traditional API key authentication. OAuth 2.0: Use Keycloak/OIDC for authentication.
+                </p>
+              </div>
+
+              <%= if (@selected_auth_type || (@editing_client && @editing_client.auth_type)) == :oauth do %>
+                <div>
+                  <.input
+                    type="text"
+                    name="client[oauth_client_id]"
+                    label="OAuth Client ID"
+                    placeholder="e.g., mcp-hub-client"
+                    value={
+                      if @editing_client, do: @editing_client.oauth_client_id || "", else: ""
+                    }
+                    required
+                  />
+                  <p class="mt-1 text-sm text-gray-500">
+                    The client ID from your OAuth provider (Okta, Keycloak, Entra ID, etc.)
+                  </p>
+                </div>
+
+                <div>
+                  <.input
+                    type="text"
+                    name="client[oauth_issuer_url]"
+                    label="OAuth Issuer URL"
+                    placeholder="e.g., https://your-company.okta.com/oauth2/default"
+                    value={
+                      if @editing_client, do: @editing_client.oauth_issuer_url || "", else: ""
+                    }
+                    required
+                  />
+                  <p class="mt-1 text-sm text-gray-500">
+                    The issuer URL from your OAuth provider where we'll validate tokens
+                  </p>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-sm font-medium leading-6 text-gray-900">
+                Allowed Origins (CORS)
+              </label>
+              <.input
+                type="text"
+                name="client[allowed_origins]"
+                placeholder="http://localhost:3000,https://myapp.com"
+                value={
+                  if @editing_client,
+                    do: Enum.join(@editing_client.allowed_origins || [], ","),
+                    else: ""
+                }
+              />
+              <p class="mt-1 text-sm text-gray-500">
+                Comma-separated list of allowed origins for CORS requests. Use "*" for development only.
+              </p>
+            </div>
+          </.form_section>
+
+          <.form_section title="Server Permissions" class="mt-6">
+            <div class="space-y-4">
+              <%= for server <- @servers do %>
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <h5 class="text-sm font-medium text-gray-800">{server.name}</h5>
+                    <span class="text-xs text-gray-500">{server.endpoint}</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-4">
+                    <div class="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={"permissions_#{server.name}_tools"}
+                        name={"permissions[#{server.name}][tools]"}
+                        value="true"
+                        checked={
+                          (@form_mode == :edit &&
+                             client_has_permission?(@editing_client, server.name, :tools)) ||
+                            (@form_mode == :create &&
+                               Map.get(@selected_permissions, "#{server.name}_tools", false))
+                        }
+                        disabled={!server_supports_capability?(server.name, "tools")}
+                        class={[
+                          "h-4 w-4 rounded border-gray-300 focus:ring-blue-500",
+                          if(server_supports_capability?(server.name, "tools"),
+                            do: "text-blue-600",
+                            else: "text-gray-300 cursor-not-allowed"
+                          )
+                        ]}
+                      />
+                      <label
+                        for={"permissions_#{server.name}_tools"}
+                        class={[
+                          "ml-2 text-sm",
+                          if(server_supports_capability?(server.name, "tools"),
+                            do: "text-gray-900",
+                            else: "text-gray-400"
+                          )
+                        ]}
+                      >
+                        Tools
+                      </label>
+                    </div>
+                    <div class="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={"permissions_#{server.name}_resources"}
+                        name={"permissions[#{server.name}][resources]"}
+                        value="true"
+                        checked={
+                          (@form_mode == :edit &&
+                             client_has_permission?(@editing_client, server.name, :resources)) ||
+                            (@form_mode == :create &&
+                               Map.get(@selected_permissions, "#{server.name}_resources", false))
+                        }
+                        disabled={!server_supports_capability?(server.name, "resources")}
+                        class={[
+                          "h-4 w-4 rounded border-gray-300 focus:ring-blue-500",
+                          if(server_supports_capability?(server.name, "resources"),
+                            do: "text-blue-600",
+                            else: "text-gray-300 cursor-not-allowed"
+                          )
+                        ]}
+                      />
+                      <label
+                        for={"permissions_#{server.name}_resources"}
+                        class={[
+                          "ml-2 text-sm",
+                          if(server_supports_capability?(server.name, "resources"),
+                            do: "text-gray-900",
+                            else: "text-gray-400"
+                          )
+                        ]}
+                      >
+                        Resources
+                      </label>
+                    </div>
+                    <div class="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={"permissions_#{server.name}_prompts"}
+                        name={"permissions[#{server.name}][prompts]"}
+                        value="true"
+                        checked={
+                          (@form_mode == :edit &&
+                             client_has_permission?(@editing_client, server.name, :prompts)) ||
+                            (@form_mode == :create &&
+                               Map.get(@selected_permissions, "#{server.name}_prompts", false))
+                        }
+                        disabled={!server_supports_capability?(server.name, "prompts")}
+                        class={[
+                          "h-4 w-4 rounded border-gray-300 focus:ring-blue-500",
+                          if(server_supports_capability?(server.name, "prompts"),
+                            do: "text-blue-600",
+                            else: "text-gray-300 cursor-not-allowed"
+                          )
+                        ]}
+                      />
+                      <label
+                        for={"permissions_#{server.name}_prompts"}
+                        class={[
+                          "ml-2 text-sm",
+                          if(server_supports_capability?(server.name, "prompts"),
+                            do: "text-gray-900",
+                            else: "text-gray-400"
+                          )
+                        ]}
+                      >
+                        Prompts
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </.form_section>
+
+          <.form_buttons
+            on_cancel="hide_form"
+            submit_label={if @form_mode == :edit, do: "Update Client", else: "Create Client"}
+          />
+        </.form>
+      </:body>
+    </.modal>
+
+    <.data_table title="Clients">
+      <:header>
+        <.th>Client</.th>
+        <.th>Status</.th>
+        <.th>Created</.th>
+        <.th>Permissions</.th>
+        <th scope="col" class="relative px-6 py-3">
+          <span class="sr-only">Actions</span>
+        </th>
+      </:header>
+      <:body>
+        <tbody id="clients" phx-update="stream">
+          <%= for {id, client} <- @streams.clients do %>
+            <tr id={id} class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <.icon_avatar icon="hero-users" color="blue" />
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900">{client.name}</div>
+                    <div class="text-sm text-gray-500">{client.description}</div>
+                    <div class="text-xs text-gray-400 font-mono mt-1">
+                      ID: {client.id}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <button
+                  phx-click="toggle_client_status"
+                  phx-value-client_id={client.id}
+                  class={[
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer",
+                    if(client.active,
+                      do: "bg-green-100 text-green-800 hover:bg-green-200",
+                      else: "bg-red-100 text-red-800 hover:bg-red-200"
+                    )
+                  ]}
+                >
+                  <span class={[
+                    "w-1.5 h-1.5 mr-1.5 rounded-full",
+                    if(client.active, do: "bg-green-400", else: "bg-red-400")
+                  ]}>
+                  </span>
+                  {if client.active, do: "Active", else: "Inactive"}
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {Calendar.strftime(client.created_at, "%Y-%m-%d %H:%M")}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <button
+                  phx-click="toggle_client_permissions"
+                  phx-value-client_id={client.id}
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200"
+                >
+                  <.icon name="hero-key" class="w-3 h-3 mr-1" />
+                  {length(client.permissions)} permissions
+                  <.icon
+                    name={
+                      if @selected_client == client.id,
+                        do: "hero-chevron-up",
+                        else: "hero-chevron-down"
+                    }
+                    class="w-3 h-3 ml-1"
+                  />
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex items-center space-x-2">
+                  <button
+                    phx-click="regenerate_api_key"
+                    phx-value-client_id={client.id}
+                    class="text-blue-600 hover:text-blue-900 text-sm"
+                    title="Regenerate API Key"
+                  >
+                    <.icon name="hero-arrow-path" class="w-4 h-4" />
+                  </button>
+                  <button
+                    phx-click="edit_client"
+                    phx-value-client_id={client.id}
+                    class="text-gray-600 hover:text-gray-900 text-sm"
+                    title="Edit Client"
+                  >
+                    <.icon name="hero-pencil" class="w-4 h-4" />
+                  </button>
+                  <button
+                    phx-click="delete_client"
+                    phx-value-client_id={client.id}
+                    data-confirm="Are you sure you want to delete this client? This will remove all associated permissions."
+                    class="text-red-600 hover:text-red-900 text-sm"
+                    title="Delete Client"
+                  >
+                    <.icon name="hero-trash" class="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <%= if @selected_client == client.id do %>
+              <tr class="bg-gray-50">
+                <td colspan="5" class="px-6 py-4">
+                  <div class="space-y-4">
+                    <h4 class="text-sm font-medium text-gray-900">Current Permissions</h4>
+
+                    <div class="flex flex-wrap gap-2 mb-4">
+                      <%= for permission <- @client_permissions do %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                          {format_resource_type(permission.resource_type)}:{permission.server_name}:{permission.resource_pattern}:{format_action(
+                            permission.action
+                          )}
+                          <button
+                            phx-click="revoke_permission"
+                            phx-value-client_id={client.id}
+                            phx-value-permission_id={permission.id}
+                            class="ml-1 hover:text-blue-600"
+                            title="Remove permission"
+                          >
+                            <.icon name="hero-x-mark" class="w-3 h-3" />
+                          </button>
+                        </span>
+                      <% end %>
+                    </div>
+
+                    <div>
+                      <h5 class="text-xs font-medium text-gray-700 mb-2">
+                        Available Permissions
+                      </h5>
+                      <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-md">
+                        <%= for permission <- @permissions do %>
+                          <%= unless client_permission_granted?(@client_permissions, permission.id) do %>
+                            <div class="flex items-center justify-between px-3 py-2 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                              <div class="text-xs">
+                                <span class="font-medium">
+                                  {format_resource_type(permission.resource_type)}
+                                </span>
+                                <span class="text-gray-500">on</span>
+                                <span class="font-medium">{permission.server_name}</span>
+                                <span class="text-gray-500">for</span>
+                                <span class="font-medium">{permission.resource_pattern}</span>
+                                <span class="text-gray-500">
+                                  ({format_action(permission.action)})
+                                </span>
+                              </div>
+                              <button
+                                phx-click="grant_permission"
+                                phx-value-client_id={client.id}
+                                phx-value-permission_id={permission.id}
+                                class="ml-2 text-green-600 hover:text-green-900"
+                                title="Grant permission"
+                              >
+                                <.icon name="hero-plus" class="w-4 h-4" />
+                              </button>
+                            </div>
+                          <% end %>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </:body>
+    </.data_table>
+
+    <%= if @clients_page && @clients_page.more? do %>
+      <div class="bg-gray-50 px-4 py-3 text-center rounded-lg">
+        <button
+          phx-click="load_more"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <.icon name="hero-arrow-down" class="w-4 h-4 mr-2" />
+          Load More ({@page_size} more clients)
+        </button>
+      </div>
+    <% end %>
+  </div>
+
+  <%= if assigns[:api_key] && assigns[:created_client] do %>
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-medium text-gray-900">API Key Generated</h3>
+          <button
+            phx-click="close_api_key_modal"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <.icon name="hero-x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <p class="text-sm text-gray-600 mb-2">
+            Your API key for <strong>{@created_client.name}</strong> has been generated.
+          </p>
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <p class="text-xs text-yellow-800">
+              <strong>Important:</strong>
+              This is the only time you'll see this key. Store it securely.
+            </p>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+          <div class="flex">
+            <input
+              type="text"
+              id="api-key-input"
+              value={@api_key}
+              readonly
+              class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-gray-900 text-sm font-mono"
+            />
+            <button
+              phx-click="copy_api_key"
+              onclick="navigator.clipboard.writeText(document.getElementById('api-key-input').value)"
+              class="px-3 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700"
+              title="Copy to clipboard"
+            >
+              <.icon name="hero-clipboard" class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button
+            phx-click="close_api_key_modal"
+            class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</Layouts.admin>

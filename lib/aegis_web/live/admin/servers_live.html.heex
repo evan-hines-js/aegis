@@ -1,0 +1,304 @@
+<Layouts.admin
+  flash={@flash}
+  current_user={@current_user}
+  current_page={@current_page}
+  page_title={@page_title}
+>
+  <div class="space-y-6">
+    <.page_header description="Manage MCP servers and their connectivity. Servers are automatically configured with default permissions.">
+      <:action>
+        <.action_button icon="hero-plus" color="green" click="show_form">
+          Register Server
+        </.action_button>
+      </:action>
+    </.page_header>
+
+    <.modal show={@show_form} on_cancel="hide_form">
+      <:title>
+        {if @form_mode == :edit, do: "Edit Server", else: "Register New Server"}
+      </:title>
+      <:body>
+        <.form
+          for={%{}}
+          phx-submit={if @form_mode == :edit, do: "update_server", else: "create_server"}
+          id="server-form"
+          class="space-y-4"
+        >
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <.input
+              type="text"
+              name="server[name]"
+              label="Server Name"
+              placeholder="e.g., file-server"
+              value={if @editing_server, do: @editing_server.name, else: ""}
+              required
+            />
+            <.input
+              type="url"
+              name="server[endpoint]"
+              label="Endpoint URL"
+              placeholder="https://server.example.com/mcp"
+              value={if @editing_server, do: @editing_server.endpoint, else: ""}
+              required
+            />
+          </div>
+
+          <.form_section title="Authentication Configuration" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Authentication Type
+              </label>
+              <select
+                name="server[auth_type]"
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                phx-change="auth_type_changed"
+              >
+                <option
+                  value="none"
+                  selected={
+                    if @editing_server, do: @editing_server.auth_type == :none, else: true
+                  }
+                >
+                  No Authentication
+                </option>
+                <option
+                  value="api_key"
+                  selected={@editing_server && @editing_server.auth_type == :api_key}
+                >
+                  API Key
+                </option>
+                <option
+                  value="oauth"
+                  selected={@editing_server && @editing_server.auth_type == :oauth}
+                >
+                  OAuth 2.0 (Client Credentials)
+                </option>
+              </select>
+            </div>
+
+            <div class={[
+              "transition-all duration-200",
+              if(
+                (@editing_server && @editing_server.auth_type == :api_key) ||
+                  @selected_auth_type == "api_key",
+                do: "opacity-100",
+                else: "opacity-50"
+              )
+            ]}>
+              <.input
+                type="password"
+                name="server[api_key]"
+                label="API Key"
+                placeholder="Enter API key for Bearer token authentication"
+                value={if @editing_server, do: @editing_server.api_key, else: ""}
+                disabled={
+                  not ((@editing_server && @editing_server.auth_type == :api_key) ||
+                         @selected_auth_type == "api_key")
+                }
+              />
+            </div>
+
+            <div class={[
+              "space-y-4 transition-all duration-200",
+              if(
+                (@editing_server && @editing_server.auth_type == :oauth) ||
+                  @selected_auth_type == "oauth",
+                do: "opacity-100",
+                else: "opacity-50"
+              )
+            ]}>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <.input
+                  type="text"
+                  name="server[oauth_client_id]"
+                  label="OAuth Client ID"
+                  placeholder="Client identifier for OAuth 2.0"
+                  value={if @editing_server, do: @editing_server.oauth_client_id, else: ""}
+                  disabled={
+                    not ((@editing_server && @editing_server.auth_type == :oauth) ||
+                           @selected_auth_type == "oauth")
+                  }
+                />
+                <.input
+                  type="password"
+                  name="server[oauth_client_secret]"
+                  label="OAuth Client Secret"
+                  placeholder="Client secret for OAuth 2.0"
+                  value={if @editing_server, do: @editing_server.oauth_client_secret, else: ""}
+                  disabled={
+                    not ((@editing_server && @editing_server.auth_type == :oauth) ||
+                           @selected_auth_type == "oauth")
+                  }
+                />
+              </div>
+              <.input
+                type="url"
+                name="server[oauth_token_url]"
+                label="OAuth Token URL"
+                placeholder="https://auth.example.com/oauth/token"
+                value={if @editing_server, do: @editing_server.oauth_token_url, else: ""}
+                disabled={
+                  not ((@editing_server && @editing_server.auth_type == :oauth) ||
+                         @selected_auth_type == "oauth")
+                }
+              />
+              <.input
+                type="text"
+                name="server[oauth_scopes]"
+                label="OAuth Scopes (optional)"
+                placeholder="space-separated scopes: read write admin"
+                value={
+                  if @editing_server && @editing_server.oauth_scopes,
+                    do: Enum.join(@editing_server.oauth_scopes, " "),
+                    else: ""
+                }
+                disabled={
+                  not ((@editing_server && @editing_server.auth_type == :oauth) ||
+                         @selected_auth_type == "oauth")
+                }
+              />
+            </div>
+          </.form_section>
+
+          <%= if @form_mode == :create do %>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+              <p class="text-sm text-blue-800">
+                <strong>Note:</strong>
+                Registering a server will automatically create default permissions for tools, resources, and prompts.
+              </p>
+            </div>
+          <% end %>
+
+          <.form_buttons
+            on_cancel="hide_form"
+            submit_label={if @form_mode == :edit, do: "Update Server", else: "Register Server"}
+            color="green"
+          />
+        </.form>
+      </:body>
+    </.modal>
+
+    <.data_table title="Registered Servers">
+      <:header>
+        <.th>Server</.th>
+        <.th>Endpoint</.th>
+        <.th>Authentication</.th>
+        <.th>Status</.th>
+        <th scope="col" class="relative px-6 py-3">
+          <span class="sr-only">Actions</span>
+        </th>
+      </:header>
+      <:body>
+        <tbody id="servers" phx-update="stream">
+          <tr :for={{id, server} <- @streams.servers} id={id} class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center">
+                <.icon_avatar icon="hero-server" color="green" />
+                <div class="ml-4">
+                  <div class="text-sm font-medium text-gray-900">{server.name}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm text-gray-900 font-mono">{server.endpoint}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <.badge status={server.auth_type}>
+                {case server.auth_type do
+                  :api_key -> "API Key"
+                  :oauth -> "OAuth"
+                  _ -> "None"
+                end}
+              </.badge>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class={[
+                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                case Map.get(server, :current_status, :unknown) do
+                  :healthy -> "bg-green-100 text-green-800"
+                  :unhealthy -> "bg-red-100 text-red-800"
+                  _ -> "bg-gray-100 text-gray-800"
+                end
+              ]}>
+                <span class={[
+                  "w-1.5 h-1.5 mr-1.5 rounded-full",
+                  case Map.get(server, :current_status, :unknown) do
+                    :healthy -> "bg-green-400"
+                    :unhealthy -> "bg-red-400"
+                    _ -> "bg-gray-400"
+                  end
+                ]}>
+                </span>
+                {case Map.get(server, :current_status, :unknown) do
+                  :healthy -> "Healthy"
+                  :unhealthy -> "Unhealthy"
+                  _ -> "Unknown"
+                end}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <div class="flex items-center space-x-2">
+                <button
+                  phx-click="test_connectivity"
+                  phx-value-server_id={server.id}
+                  class="text-blue-600 hover:text-blue-900 text-sm"
+                  title="Test Connectivity"
+                >
+                  <.icon name="hero-signal" class="w-4 h-4" />
+                </button>
+                <button
+                  phx-click="edit_server"
+                  phx-value-server_id={server.id}
+                  class="text-gray-600 hover:text-gray-900 text-sm"
+                  title="Edit Server"
+                >
+                  <.icon name="hero-pencil" class="w-4 h-4" />
+                </button>
+                <button
+                  phx-click="delete_server"
+                  phx-value-server_id={server.id}
+                  data-confirm="Are you sure you want to delete this server? This will remove all associated permissions."
+                  class="text-red-600 hover:text-red-900 text-sm"
+                  title="Delete Server"
+                >
+                  <.icon name="hero-trash" class="w-4 h-4" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+
+        <%= if @servers_page && Enum.empty?(@servers_page.results) do %>
+          <tr>
+            <td colspan="5">
+              <div class="text-center py-12">
+                <.icon name="hero-server" class="mx-auto h-12 w-12 text-gray-400" />
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No servers registered</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                  Get started by registering your first MCP server.
+                </p>
+                <div class="mt-6">
+                  <.action_button icon="hero-plus" color="green" click="show_form">
+                    Register Server
+                  </.action_button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </:body>
+    </.data_table>
+
+    <%= if @servers_page && @servers_page.more? do %>
+      <div class="bg-gray-50 px-4 py-3 text-center rounded-lg">
+        <button
+          phx-click="load_more"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          <.icon name="hero-arrow-down" class="w-4 h-4 mr-2" />
+          Load More ({@page_size} more servers)
+        </button>
+      </div>
+    <% end %>
+  </div>
+</Layouts.admin>

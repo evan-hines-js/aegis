@@ -1,0 +1,177 @@
+defmodule Aegis.MCP.Server do
+  @moduledoc false
+  use Ash.Resource,
+    otp_app: :aegis,
+    domain: Aegis.MCP,
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshJsonApi.Resource, AshCloak]
+
+  postgres do
+    table "servers"
+    repo Aegis.Repo
+  end
+
+  json_api do
+    type "server"
+  end
+
+  cloak do
+    vault(Aegis.Vault)
+    attributes [:api_key, :oauth_client_secret]
+  end
+
+  code_interface do
+    define :create, args: [:name, :endpoint]
+    define :get_by_name, action: :read, get_by: [:name]
+    define :list, action: :read
+    define :update
+    define :destroy
+  end
+
+  actions do
+    defaults [:read]
+
+    create :create do
+      primary? true
+
+      accept [
+        :name,
+        :endpoint,
+        :auth_type,
+        :api_key,
+        :oauth_client_id,
+        :oauth_client_secret,
+        :oauth_token_url,
+        :oauth_scopes
+      ]
+
+      change after_transaction(fn _changeset, result, _context ->
+               case result do
+                 {:ok, server} ->
+                   Phoenix.PubSub.broadcast(
+                     Aegis.PubSub,
+                     "server_changes",
+                     {:server_created, server}
+                   )
+
+                   result
+
+                 error ->
+                   error
+               end
+             end)
+    end
+
+    update :update do
+      primary? true
+      require_atomic? false
+
+      accept [
+        :name,
+        :endpoint,
+        :auth_type,
+        :api_key,
+        :oauth_client_id,
+        :oauth_client_secret,
+        :oauth_token_url,
+        :oauth_scopes,
+        :capabilities
+      ]
+
+      change after_transaction(fn _changeset, result, _context ->
+               case result do
+                 {:ok, server} ->
+                   Phoenix.PubSub.broadcast(
+                     Aegis.PubSub,
+                     "server_changes",
+                     {:server_updated, server}
+                   )
+
+                   result
+
+                 error ->
+                   error
+               end
+             end)
+    end
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+
+      change after_transaction(fn _changeset, result, _context ->
+               case result do
+                 {:ok, server} ->
+                   Phoenix.PubSub.broadcast(
+                     Aegis.PubSub,
+                     "server_changes",
+                     {:server_deleted, server}
+                   )
+
+                   result
+
+                 error ->
+                   error
+               end
+             end)
+    end
+  end
+
+  attributes do
+    uuid_v7_primary_key :id
+
+    attribute :name, :string, allow_nil?: false, public?: true
+
+    attribute :endpoint, :string, allow_nil?: false, public?: true
+
+    attribute :auth_type, :atom do
+      allow_nil? false
+      public? true
+      default :none
+      constraints one_of: [:none, :oauth, :api_key]
+    end
+
+    attribute :api_key, :string do
+      allow_nil? true
+      public? true
+      sensitive? true
+    end
+
+    # OAuth client configuration
+    attribute :oauth_client_id, :string do
+      allow_nil? true
+      public? true
+    end
+
+    attribute :oauth_client_secret, :string do
+      allow_nil? true
+      public? true
+      sensitive? true
+    end
+
+    attribute :oauth_token_url, :string do
+      allow_nil? true
+      public? true
+    end
+
+    attribute :oauth_scopes, {:array, :string} do
+      allow_nil? true
+      public? true
+      default []
+    end
+
+    attribute :capabilities, :map do
+      allow_nil? true
+      public? true
+      default %{}
+      description "Cached server capabilities from last successful fetch"
+    end
+
+    create_timestamp :created_at
+    update_timestamp :updated_at
+  end
+
+  identities do
+    identity :unique_name, [:name]
+  end
+end

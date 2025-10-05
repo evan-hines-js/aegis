@@ -1,0 +1,54 @@
+<Layouts.admin
+  flash={@flash}
+  current_user={@current_user}
+  current_page={@current_page}
+  page_title={@page_title}
+>
+  <div class="space-y-6">
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div class="px-4 py-5 sm:px-6">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">MCP Hub Administration</h3>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+          Configure and manage your MCP Hub.
+        </p>
+      </div>
+      <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <.link
+            navigate={~p"/admin/clients"}
+            class="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+          >
+            <div class="flex-shrink-0">
+              <.icon name="hero-users" class="h-6 w-6 text-blue-600" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="focus:outline-none">
+                <span class="absolute inset-0" aria-hidden="true"></span>
+                <p class="text-sm font-medium text-gray-900">Manage Clients</p>
+                <p class="text-sm text-gray-500 truncate">
+                  Configure MCP clients and permissions
+                </p>
+              </div>
+            </div>
+          </.link>
+
+          <.link
+            navigate={~p"/admin/servers"}
+            class="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+          >
+            <div class="flex-shrink-0">
+              <.icon name="hero-server" class="h-6 w-6 text-green-600" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="focus:outline-none">
+                <span class="absolute inset-0" aria-hidden="true"></span>
+                <p class="text-sm font-medium text-gray-900">Manage Servers</p>
+                <p class="text-sm text-gray-500 truncate">Configure MCP servers and endpoints</p>
+              </div>
+            </div>
+          </.link>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.admin>
