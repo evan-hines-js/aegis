@@ -43,7 +43,6 @@ defmodule Aegis.MCP.Client do
         :name,
         :description,
         :active,
-        :allowed_origins,
         :auth_type,
         :oauth_client_id,
         :oauth_issuer_url,
@@ -95,8 +94,7 @@ defmodule Aegis.MCP.Client do
 
       accept [
         :name,
-        :description,
-        :allowed_origins
+        :description
       ]
 
       change fn changeset, _context ->
@@ -260,13 +258,6 @@ defmodule Aegis.MCP.Client do
       public? true
       default true
       description "Whether the client is active and can authenticate"
-    end
-
-    attribute :allowed_origins, {:array, :string} do
-      allow_nil? true
-      public? true
-      default []
-      description "List of allowed origins for CORS requests during client registration"
     end
 
     attribute :auth_type, :atom do

@@ -1,4 +1,4 @@
-defmodule Aegis.Repo.Migrations.MigrateResources1 do
+defmodule Aegis.Repo.Migrations.DropAllowedOriginsFromClients do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -11,9 +11,17 @@ defmodule Aegis.Repo.Migrations.MigrateResources1 do
     alter table(:servers) do
       modify :api_key_template, :text, default: "{API_KEY}"
     end
+
+    alter table(:mcp_clients) do
+      remove :allowed_origins
+    end
   end
 
   def down do
+    alter table(:mcp_clients) do
+      add :allowed_origins, {:array, :text}, default: []
+    end
+
     alter table(:servers) do
       modify :api_key_template, :text, default: "Bearer {API_KEY}"
     end

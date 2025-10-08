@@ -9,8 +9,6 @@ defmodule AegisWeb.CORS do
   import Plug.Conn
   require Logger
 
-  alias Aegis.MCP.Client
-
   @type cors_config :: :mcp | :oauth_metadata | :oauth_registration
 
   @doc """
@@ -83,23 +81,10 @@ defmodule AegisWeb.CORS do
 
   # Private Functions
 
-  # Get CORS origin for registration endpoints with client-specific validation
+  # Get CORS origin for registration endpoints
+  # Clients are AI agents (not browsers), so we use global CORS config
   defp get_origin_for_registration(conn) do
-    request_origin = extract_request_origin(conn)
-    client_name = extract_client_name_from_request(conn)
-
-    case get_client_cors_config(client_name, request_origin) do
-      {:ok, allowed_origin} ->
-        allowed_origin
-
-      # Fall back to global config
-      {:error, :not_found} ->
-        get_origin(conn, :oauth_registration)
-
-      # Deny CORS
-      {:error, :unauthorized} ->
-        "null"
-    end
+    get_origin(conn, :oauth_registration)
   end
 
   # Get CORS origin based on configuration type
@@ -166,40 +151,6 @@ defmodule AegisWeb.CORS do
       [origin] -> origin
       [] -> nil
       _multiple -> nil
-    end
-  end
-
-  # Extract client name from request body or params
-  defp extract_client_name_from_request(conn) do
-    case conn.body_params do
-      %{"client_name" => client_name} when is_binary(client_name) ->
-        client_name
-
-      _ ->
-        case conn.params do
-          %{"client_name" => client_name} when is_binary(client_name) -> client_name
-          _ -> nil
-        end
-    end
-  end
-
-  # Get client-specific CORS configuration
-  defp get_client_cors_config(nil, _origin), do: {:error, :not_found}
-  defp get_client_cors_config(_client_name, nil), do: {:error, :unauthorized}
-
-  defp get_client_cors_config(client_name, request_origin) do
-    case Client.get_by_name(client_name) do
-      {:ok, client} ->
-        allowed_origins = client.allowed_origins || []
-
-        if request_origin in allowed_origins or "*" in allowed_origins do
-          {:ok, request_origin}
-        else
-          {:error, :unauthorized}
-        end
-
-      {:error, _} ->
-        {:error, :not_found}
     end
   end
 end

@@ -109,25 +109,6 @@
                 </div>
               <% end %>
             </div>
-
-            <div class="mt-4">
-              <label class="block text-sm font-medium leading-6 text-gray-900">
-                Allowed Origins (CORS)
-              </label>
-              <.input
-                type="text"
-                name="client[allowed_origins]"
-                placeholder="http://localhost:3000,https://myapp.com"
-                value={
-                  if @editing_client,
-                    do: Enum.join(@editing_client.allowed_origins || [], ","),
-                    else: ""
-                }
-              />
-              <p class="mt-1 text-sm text-gray-500">
-                Comma-separated list of allowed origins for CORS requests. Use "*" for development only.
-              </p>
-            </div>
           </.form_section>
 
           <.form_section title="Server Permissions" class="mt-6">

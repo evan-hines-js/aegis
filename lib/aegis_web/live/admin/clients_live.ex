@@ -86,8 +86,7 @@ defmodule AegisWeb.Admin.ClientsLive do
 
   def handle_event("create_client", %{"client" => client_params} = params, socket) do
     auth_type = Map.get(client_params, "auth_type", "api_key") |> String.to_existing_atom()
-    processed_params = process_allowed_origins(client_params)
-    base_params = Map.take(processed_params, ["name", "description", "allowed_origins"])
+    base_params = Map.take(client_params, ["name", "description"])
 
     case Aegis.MCP.create_client(base_params) do
       {:ok, client} ->
@@ -104,11 +103,7 @@ defmodule AegisWeb.Admin.ClientsLive do
 
   def handle_event("update_client", %{"client" => client_params} = params, socket) do
     client = socket.assigns.editing_client
-    # Process allowed_origins and auth fields
-    processed_params =
-      client_params
-      |> process_allowed_origins()
-      |> Map.update("auth_type", "api_key", & &1)
+    processed_params = Map.update(client_params, "auth_type", "api_key", & &1)
 
     case Aegis.MCP.update_client(client, processed_params) do
       {:ok, _updated_client} ->
@@ -374,20 +369,6 @@ defmodule AegisWeb.Admin.ClientsLive do
   end
 
   # Permission management moved to ClientPermissionManager
-
-  defp process_allowed_origins(%{"allowed_origins" => origins_string} = params)
-       when is_binary(origins_string) do
-    # Convert comma-separated string to list
-    origins_list =
-      origins_string
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-
-    Map.put(params, "allowed_origins", origins_list)
-  end
-
-  defp process_allowed_origins(params), do: params
 
   defp get_server_capabilities(server_name) do
     # Use cached capabilities from cache
