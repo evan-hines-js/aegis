@@ -2,14 +2,26 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "nil",
+      "default": "fragment(\"gen_random_uuid()\")",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "jti",
+      "source": "id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "session_id",
       "type": "text"
     },
     {
@@ -21,7 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "subject",
+      "source": "client_id",
       "type": "text"
     },
     {
@@ -33,31 +45,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "expires_at",
-      "type": "utc_datetime"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "purpose",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "extra_data",
+      "source": "session_data",
       "type": "map"
     },
     {
@@ -69,7 +57,19 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "created_at",
+      "source": "persisted_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "inserted_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -90,8 +90,23 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "8C412B6B6AB0890E8A8D1AC6AAE3423DCB45FF7A3F2B7EDA145928418173DADC",
-  "identities": [],
+  "hash": "850E05DF6255C2046C1E7E59051241D1B03F940716EBC11CC0B8E4577F6678DF",
+  "identities": [
+    {
+      "all_tenants?": false,
+      "base_filter": null,
+      "index_name": "mcp_persisted_sessions_unique_session_id_index",
+      "keys": [
+        {
+          "type": "atom",
+          "value": "session_id"
+        }
+      ],
+      "name": "unique_session_id",
+      "nils_distinct?": true,
+      "where": null
+    }
+  ],
   "multitenancy": {
     "attribute": null,
     "global": null,
@@ -99,5 +114,5 @@
   },
   "repo": "Elixir.Aegis.Repo",
   "schema": null,
-  "table": "tokens"
+  "table": "mcp_persisted_sessions"
 }

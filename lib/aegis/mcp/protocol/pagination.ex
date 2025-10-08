@@ -260,8 +260,12 @@ defmodule Aegis.MCP.Pagination do
           []
       end)
       |> Stream.map(&apply_namespace(&1, &1.server_name, item_type))
-      |> Stream.filter(&item_passes_server_filter?(&1, accessible_servers, name_extractor, resource_type))
-      |> Stream.filter(&item_passes_permission_filter?(&1, permissions, resource_type, name_extractor))
+      |> Stream.filter(
+        &item_passes_server_filter?(&1, accessible_servers, name_extractor, resource_type)
+      )
+      |> Stream.filter(
+        &item_passes_permission_filter?(&1, permissions, resource_type, name_extractor)
+      )
       |> Stream.map(&Map.delete(&1, :server_name))
       |> Enum.to_list()
 

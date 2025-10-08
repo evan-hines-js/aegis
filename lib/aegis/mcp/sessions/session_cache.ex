@@ -66,6 +66,9 @@ defmodule Aegis.MCP.SessionCache do
   Update session data using a custom update function.
   Automatically updates last_activity timestamp.
 
+  Uses atomic Cachex.update to prevent race conditions when multiple
+  processes update the same session concurrently.
+
   ## Examples
 
       # Update a field

@@ -109,7 +109,6 @@ defmodule Aegis.MCP.Retry do
           "Retrying in #{delay}ms..."
       )
     end
-
   end
 
   defp log_final_failure(max_attempts, reason, quiet, opts) do

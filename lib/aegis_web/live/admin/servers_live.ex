@@ -346,6 +346,8 @@ defmodule AegisWeb.Admin.ServersLive do
       "none" ->
         server_params
         |> Map.put("api_key", nil)
+        |> Map.put("api_key_header", nil)
+        |> Map.put("api_key_template", nil)
         |> Map.put("oauth_client_id", nil)
         |> Map.put("oauth_client_secret", nil)
         |> Map.put("oauth_token_url", nil)
@@ -361,6 +363,8 @@ defmodule AegisWeb.Admin.ServersLive do
       "oauth" ->
         server_params
         |> Map.put("api_key", nil)
+        |> Map.put("api_key_header", nil)
+        |> Map.put("api_key_template", nil)
 
       _ ->
         server_params
@@ -381,6 +385,8 @@ defmodule AegisWeb.Admin.ServersLive do
       endpoint: server.endpoint,
       auth_type: server.auth_type || :none,
       api_key: server.api_key,
+      api_key_header: server.api_key_header,
+      api_key_template: server.api_key_template,
       oauth_client_id: server.oauth_client_id,
       oauth_client_secret: server.oauth_client_secret,
       oauth_token_url: server.oauth_token_url,

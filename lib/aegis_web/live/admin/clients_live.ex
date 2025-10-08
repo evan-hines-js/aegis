@@ -390,15 +390,17 @@ defmodule AegisWeb.Admin.ClientsLive do
   defp process_allowed_origins(params), do: params
 
   defp get_server_capabilities(server_name) do
-    # Use cached capabilities from cache (includes DB cache)
-    # This allows permission management even when server is unhealthy
+    # Use cached capabilities from cache
+    # ServerMonitor caches capabilities with {server_name, protocol_version} key
     alias Aegis.Cache
+    alias Aegis.MCP.Constants
 
-    cache_key = {:server, server_name}
+    protocol_version = Constants.default_protocol_version()
+    cache_key = {server_name, protocol_version}
 
     case Cache.get(:mcp_meta_cache, cache_key) do
-      {:ok, server_info} when not is_nil(server_info) ->
-        Map.get(server_info, :capabilities, %{})
+      {:ok, capabilities} when is_map(capabilities) ->
+        capabilities
 
       _ ->
         %{}

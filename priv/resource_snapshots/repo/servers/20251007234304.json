@@ -2,7 +2,7 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "fragment(\"gen_random_uuid()\")",
+      "default": "fragment(\"uuid_generate_v7()\")",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
@@ -21,56 +21,56 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "keycloak_client_id",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "expires_in",
-      "type": "bigint"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "scopes",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "state",
+      "source": "name",
       "type": "text"
     },
     {
       "allow_nil?": false,
-      "default": "true",
+      "default": "nil",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "active",
-      "type": "boolean"
+      "source": "endpoint",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "\"none\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "auth_type",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "\"Authorization\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "api_key_header",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "\"Bearer {API_KEY}\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "api_key_template",
+      "type": "text"
     },
     {
       "allow_nil?": true,
@@ -81,8 +81,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "refreshed_at",
-      "type": "utc_datetime_usec"
+      "source": "oauth_client_id",
+      "type": "text"
     },
     {
       "allow_nil?": true,
@@ -93,8 +93,35 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "revoked_at",
-      "type": "utc_datetime_usec"
+      "source": "oauth_token_url",
+      "type": "text"
+    },
+    {
+      "allow_nil?": true,
+      "default": "[]",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "oauth_scopes",
+      "type": [
+        "array",
+        "text"
+      ]
+    },
+    {
+      "allow_nil?": true,
+      "default": "%{}",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "capabilities",
+      "type": "map"
     },
     {
       "allow_nil?": false,
@@ -105,7 +132,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "inserted_at",
+      "source": "created_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -121,38 +148,7 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": {
-        "deferrable": false,
-        "destination_attribute": "id",
-        "destination_attribute_default": null,
-        "destination_attribute_generated": null,
-        "index?": false,
-        "match_type": null,
-        "match_with": null,
-        "multitenancy": {
-          "attribute": null,
-          "global": null,
-          "strategy": null
-        },
-        "name": "oauth_tokens_client_id_fkey",
-        "on_delete": null,
-        "on_update": null,
-        "primary_key?": true,
-        "schema": "public",
-        "table": "mcp_clients"
-      },
-      "scale": null,
-      "size": null,
-      "source": "client_id",
-      "type": "uuid"
-    },
-    {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -160,7 +156,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "encrypted_access_token",
+      "source": "encrypted_api_key",
       "type": "binary"
     },
     {
@@ -172,7 +168,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "encrypted_refresh_token",
+      "source": "encrypted_oauth_client_secret",
       "type": "binary"
     }
   ],
@@ -181,24 +177,20 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "5DC0604FFA6C2EA538CA9C65B064359C3022F315A83BAF4289977563200A7BDC",
+  "hash": "68CA1BC6231D65BFD3F549C8ED667182F9ED040114A42FD97B5B2885F5BDE66C",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "oauth_tokens_unique_client_keycloak_index",
+      "index_name": "servers_unique_name_index",
       "keys": [
         {
           "type": "atom",
-          "value": "client_id"
-        },
-        {
-          "type": "atom",
-          "value": "keycloak_client_id"
+          "value": "name"
         }
       ],
-      "name": "unique_client_keycloak",
-      "nils_distinct?": false,
+      "name": "unique_name",
+      "nils_distinct?": true,
       "where": null
     }
   ],
@@ -209,5 +201,5 @@
   },
   "repo": "Elixir.Aegis.Repo",
   "schema": null,
-  "table": "oauth_tokens"
+  "table": "servers"
 }

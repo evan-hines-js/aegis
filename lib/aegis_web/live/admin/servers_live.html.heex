@@ -77,7 +77,7 @@
             </div>
 
             <div class={[
-              "transition-all duration-200",
+              "space-y-4 transition-all duration-200",
               if(
                 (@editing_server && @editing_server.auth_type == :api_key) ||
                   @selected_auth_type == "api_key",
@@ -89,13 +89,48 @@
                 type="password"
                 name="server[api_key]"
                 label="API Key"
-                placeholder="Enter API key for Bearer token authentication"
+                placeholder="Enter API key"
                 value={if @editing_server, do: @editing_server.api_key, else: ""}
                 disabled={
                   not ((@editing_server && @editing_server.auth_type == :api_key) ||
                          @selected_auth_type == "api_key")
                 }
               />
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <.input
+                  type="text"
+                  name="server[api_key_header]"
+                  label="Header Name"
+                  placeholder="e.g., Authorization, X-API-Key"
+                  value={
+                    if @editing_server,
+                      do: @editing_server.api_key_header || "Authorization",
+                      else: "Authorization"
+                  }
+                  disabled={
+                    not ((@editing_server && @editing_server.auth_type == :api_key) ||
+                           @selected_auth_type == "api_key")
+                  }
+                />
+                <.input
+                  type="text"
+                  name="server[api_key_template]"
+                  label="Value Template"
+                  placeholder="e.g., {API_KEY} or Bearer {API_KEY}"
+                  value={
+                    if @editing_server,
+                      do: @editing_server.api_key_template || "{API_KEY}",
+                      else: "{API_KEY}"
+                  }
+                  disabled={
+                    not ((@editing_server && @editing_server.auth_type == :api_key) ||
+                           @selected_auth_type == "api_key")
+                  }
+                />
+              </div>
+              <p class="text-xs text-gray-500" phx-no-curly-interpolation>
+                Use {API_KEY} as a placeholder in the template. Example: "{API_KEY}" or "Bearer {API_KEY}"
+              </p>
             </div>
 
             <div class={[

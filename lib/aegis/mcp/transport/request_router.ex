@@ -110,59 +110,59 @@ defmodule Aegis.MCP.RequestRouter do
 
     result =
       case method do
-      "tools/list" ->
-        ToolsHandler.handle_list(
-          session_id,
-          client_id,
-          empty_pagination_tokens,
-          params,
-          auth_opts
-        )
+        "tools/list" ->
+          ToolsHandler.handle_list(
+            session_id,
+            client_id,
+            empty_pagination_tokens,
+            params,
+            auth_opts
+          )
 
-      "tools/call" ->
-        ToolsHandler.handle_call(
-          session_id,
-          client_id,
-          backend_sessions,
-          params,
-          auth_opts
-        )
+        "tools/call" ->
+          ToolsHandler.handle_call(
+            session_id,
+            client_id,
+            backend_sessions,
+            params,
+            auth_opts
+          )
 
-      "resources/list" ->
-        ResourcesHandler.handle_list(
-          session_id,
-          client_id,
-          empty_pagination_tokens,
-          params,
-          auth_opts
-        )
+        "resources/list" ->
+          ResourcesHandler.handle_list(
+            session_id,
+            client_id,
+            empty_pagination_tokens,
+            params,
+            auth_opts
+          )
 
-      "resources/read" ->
-        ResourcesHandler.handle_read(
-          session_id,
-          client_id,
-          backend_sessions,
-          params,
-          auth_opts
-        )
+        "resources/read" ->
+          ResourcesHandler.handle_read(
+            session_id,
+            client_id,
+            backend_sessions,
+            params,
+            auth_opts
+          )
 
-      "resources/templates/list" ->
-        ResourcesHandler.handle_templates_list(
-          session_id,
-          client_id,
-          empty_pagination_tokens,
-          params,
-          auth_opts
-        )
+        "resources/templates/list" ->
+          ResourcesHandler.handle_templates_list(
+            session_id,
+            client_id,
+            empty_pagination_tokens,
+            params,
+            auth_opts
+          )
 
-      "prompts/list" ->
-        PromptsHandler.handle_list(
-          session_id,
-          client_id,
-          empty_pagination_tokens,
-          params,
-          auth_opts
-        )
+        "prompts/list" ->
+          PromptsHandler.handle_list(
+            session_id,
+            client_id,
+            empty_pagination_tokens,
+            params,
+            auth_opts
+          )
 
         "prompts/get" ->
           PromptsHandler.handle_get(

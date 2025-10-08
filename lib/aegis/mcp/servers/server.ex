@@ -39,6 +39,8 @@ defmodule Aegis.MCP.Server do
         :endpoint,
         :auth_type,
         :api_key,
+        :api_key_header,
+        :api_key_template,
         :oauth_client_id,
         :oauth_client_secret,
         :oauth_token_url,
@@ -71,6 +73,8 @@ defmodule Aegis.MCP.Server do
         :endpoint,
         :auth_type,
         :api_key,
+        :api_key_header,
+        :api_key_template,
         :oauth_client_id,
         :oauth_client_secret,
         :oauth_token_url,
@@ -135,6 +139,21 @@ defmodule Aegis.MCP.Server do
       allow_nil? true
       public? true
       sensitive? true
+    end
+
+    attribute :api_key_header, :string do
+      allow_nil? true
+      public? true
+      default "Authorization"
+      description "HTTP header name for API key (e.g., 'Authorization', 'X-API-Key')"
+    end
+
+    attribute :api_key_template, :string do
+      allow_nil? true
+      public? true
+      default "{API_KEY}"
+
+      description "Template for API key value. Use {API_KEY} as placeholder (e.g., 'Bearer {API_KEY}', '{API_KEY}')"
     end
 
     # OAuth client configuration

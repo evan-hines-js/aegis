@@ -37,6 +37,8 @@ defmodule Aegis.MCP.ServerClient do
           endpoint: server.endpoint,
           auth_type: Map.get(cached_info, :auth_type, :none),
           api_key: server.api_key,
+          api_key_header: server.api_key_header,
+          api_key_template: server.api_key_template,
           oauth_client_id: server.oauth_client_id,
           oauth_client_secret: server.oauth_client_secret,
           oauth_token_url: server.oauth_token_url,
@@ -50,6 +52,8 @@ defmodule Aegis.MCP.ServerClient do
           endpoint: server.endpoint,
           auth_type: server.auth_type || :none,
           api_key: server.api_key,
+          api_key_header: server.api_key_header,
+          api_key_template: server.api_key_template,
           oauth_client_id: server.oauth_client_id,
           oauth_client_secret: server.oauth_client_secret,
           oauth_token_url: server.oauth_token_url,
@@ -198,7 +202,14 @@ defmodule Aegis.MCP.ServerClient do
   def send_notification(server, notification_body, extra_headers \\ []) do
     # Build headers with authentication
     auth_headers = build_auth_headers(server)
-    all_headers = auth_headers ++ extra_headers
+
+    # Add Accept headers for MCP protocol compliance
+    accept_headers = [
+      {"accept", "application/json, text/event-stream"},
+      {"content-type", "application/json"}
+    ]
+
+    all_headers = auth_headers ++ accept_headers ++ extra_headers
 
     # Use retry but skip circuit breaker recording
     Retry.retry_http_request(
@@ -245,7 +256,14 @@ defmodule Aegis.MCP.ServerClient do
 
     # Build headers with authentication
     auth_headers = build_auth_headers(server)
-    all_headers = auth_headers ++ extra_headers
+
+    # Add Accept headers for MCP protocol compliance
+    accept_headers = [
+      {"accept", "application/json, text/event-stream"},
+      {"content-type", "application/json"}
+    ]
+
+    all_headers = auth_headers ++ accept_headers ++ extra_headers
 
     Retry.retry_http_request(
       fn ->
@@ -265,7 +283,17 @@ defmodule Aegis.MCP.ServerClient do
     )
     |> case do
       {:ok, %Req.Response{status: 200, body: body, headers: headers}} ->
-        {:ok, body, headers}
+        # Parse SSE format if content-type is text/event-stream
+        parsed_body =
+          case Map.get(headers, "content-type") do
+            ["text/event-stream" | _] when is_binary(body) ->
+              parse_sse_response(body)
+
+            _ ->
+              body
+          end
+
+        {:ok, parsed_body, headers}
 
       {:ok, %Req.Response{status: status_code, body: body}} ->
         Logger.warning("Server #{server.name} returned status #{status_code}: #{inspect(body)}")
@@ -292,6 +320,43 @@ defmodule Aegis.MCP.ServerClient do
      }}
   end
 
+  # Parse Server-Sent Events (SSE) response format.
+  #
+  # SSE format example:
+  # event: message
+  # data: {"result": {...}, "jsonrpc": "2.0", "id": 1}
+  defp parse_sse_response(sse_body) when is_binary(sse_body) do
+    # Split by double newline to get events
+    events = String.split(sse_body, "\n\n", trim: true)
+
+    # Process each event and extract the data field
+    Enum.reduce_while(events, nil, fn event, _acc ->
+      lines = String.split(event, "\n", trim: true)
+
+      # Find the data line and parse its JSON
+      data_line =
+        Enum.find(lines, fn line ->
+          String.starts_with?(line, "data: ")
+        end)
+
+      case data_line do
+        "data: " <> json_str ->
+          case Jason.decode(json_str) do
+            {:ok, parsed} ->
+              {:halt, parsed}
+
+            {:error, _} ->
+              {:cont, nil}
+          end
+
+        _ ->
+          {:cont, nil}
+      end
+    end)
+  end
+
+  defp parse_sse_response(body), do: body
+
   @doc """
   Build authentication headers for server requests.
 
@@ -309,7 +374,14 @@ defmodule Aegis.MCP.ServerClient do
   defp build_headers_for_auth_type(server, :api_key, _opts) do
     case Map.get(server, :api_key) do
       api_key when is_binary(api_key) and api_key != "" ->
-        [{"authorization", "Bearer #{api_key}"}]
+        header_name = Map.get(server, :api_key_header, "Authorization")
+        header_name_lower = String.downcase(header_name)
+
+        # Use template to format the API key value, default to "{API_KEY}"
+        template = Map.get(server, :api_key_template, "{API_KEY}")
+        header_value = String.replace(template, "{API_KEY}", api_key)
+
+        [{header_name_lower, header_value}]
 
       _ ->
         []

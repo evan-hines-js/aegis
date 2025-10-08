@@ -80,8 +80,8 @@ defmodule Aegis.MCP.Plugs.OAuthAuthenticationPlug do
         {:api_key, _} when not allow_api_key ->
           # API key not allowed on this route
           send_unauthorized_response(conn, required_scopes, :invalid_token,
-          error_description: "API key authentication not allowed for this endpoint"
-        )
+            error_description: "API key authentication not allowed for this endpoint"
+          )
       end
 
     duration = System.monotonic_time() - start_time

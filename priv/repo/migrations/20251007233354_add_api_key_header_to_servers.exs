@@ -1,4 +1,4 @@
-defmodule Aegis.Repo.Migrations.MigrateResources1 do
+defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -37,6 +37,7 @@ defmodule Aegis.Repo.Migrations.MigrateResources1 do
       add :name, :text, null: false
       add :endpoint, :text, null: false
       add :auth_type, :text, null: false, default: "none"
+      add :api_key_header, :text, default: "Authorization"
       add :oauth_client_id, :text
       add :oauth_token_url, :text
       add :oauth_scopes, {:array, :text}, default: []
