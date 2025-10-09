@@ -3,13 +3,13 @@ defmodule AegisWeb.CORS do
   CORS (Cross-Origin Resource Sharing) header management for Aegis.
 
   Provides consistent CORS header handling across controllers with
-  support for client-specific origin whitelists and different access patterns.
+  support for client-specific origin whitelists.
   """
 
   import Plug.Conn
   require Logger
 
-  @type cors_config :: :mcp | :oauth_metadata | :oauth_registration
+  @type cors_config :: :mcp
 
   @doc """
   Add CORS headers for MCP endpoints.
@@ -32,44 +32,6 @@ defmodule AegisWeb.CORS do
   end
 
   @doc """
-  Add CORS headers for OAuth metadata discovery endpoints.
-
-  Read-only access for OAuth discovery (GET, OPTIONS only).
-  """
-  @spec add_oauth_metadata_headers(Plug.Conn.t()) :: Plug.Conn.t()
-  def add_oauth_metadata_headers(conn) do
-    origin = get_origin(conn, :oauth_metadata)
-
-    conn
-    |> put_resp_header("access-control-allow-origin", origin)
-    |> put_resp_header("access-control-allow-methods", "GET, OPTIONS")
-    |> put_resp_header(
-      "access-control-allow-headers",
-      "accept, content-type, authorization, mcp-protocol-version"
-    )
-  end
-
-  @doc """
-  Add CORS headers for OAuth registration and token endpoints.
-
-  Full CRUD access for OAuth client registration and token operations.
-  Supports client-specific origin validation.
-  """
-  @spec add_oauth_registration_headers(Plug.Conn.t()) :: Plug.Conn.t()
-  def add_oauth_registration_headers(conn) do
-    origin = get_origin_for_registration(conn)
-
-    conn
-    |> put_resp_header("access-control-allow-origin", origin)
-    |> put_resp_header("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS")
-    |> put_resp_header(
-      "access-control-allow-headers",
-      "accept, content-type, authorization, origin, x-requested-with, mcp-protocol-version"
-    )
-    |> put_resp_header("access-control-expose-headers", "location, content-type")
-  end
-
-  @doc """
   Add standard OPTIONS response headers for preflight requests.
 
   Sets max-age to 1 hour for preflight caching.
@@ -80,12 +42,6 @@ defmodule AegisWeb.CORS do
   end
 
   # Private Functions
-
-  # Get CORS origin for registration endpoints
-  # Clients are AI agents (not browsers), so we use global CORS config
-  defp get_origin_for_registration(conn) do
-    get_origin(conn, :oauth_registration)
-  end
 
   # Get CORS origin based on configuration type
   defp get_origin(conn, config_type) do
@@ -132,16 +88,6 @@ defmodule AegisWeb.CORS do
   # Get allowed origins from application config
   defp get_allowed_origins(:mcp) do
     config = Application.get_env(:aegis, AegisWeb.MCPController, [])
-    Keyword.get(config, :allowed_origins, ["*"])
-  end
-
-  defp get_allowed_origins(:oauth_metadata) do
-    config = Application.get_env(:aegis, AegisWeb.OAuthMetadataController, [])
-    Keyword.get(config, :allowed_origins, ["*"])
-  end
-
-  defp get_allowed_origins(:oauth_registration) do
-    config = Application.get_env(:aegis, AegisWeb.OAuthMetadataController, [])
     Keyword.get(config, :allowed_origins, ["*"])
   end
 

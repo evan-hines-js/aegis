@@ -2,14 +2,14 @@ defmodule Aegis.MCP.Auth.RequestContext do
   @moduledoc """
   Helper module for accessing authentication context from Plug.Conn.
 
-  Provides utilities to extract client information and JWT claims
-  that were set by the OAuthAuthenticationPlug.
+  Provides utilities to extract client information that was set
+  by the API key authentication plug.
   """
 
   @doc """
   Get the authenticated client from the connection.
 
-  Returns the client struct that was set by OAuthAuthenticationPlug.
+  Returns the client struct that was set by the authentication plug.
   """
   @spec get_client(Plug.Conn.t()) :: map() | nil
   def get_client(conn) do
@@ -28,43 +28,22 @@ defmodule Aegis.MCP.Auth.RequestContext do
   end
 
   @doc """
-  Get JWT claims from the connection.
-
-  Returns nil if authentication was via API key rather than OAuth.
-  """
-  @spec get_jwt_claims(Plug.Conn.t()) :: map() | nil
-  def get_jwt_claims(conn) do
-    Map.get(conn.assigns, :jwt_claims)
-  end
-
-  @doc """
   Get the authentication method used.
 
-  Returns :oauth, :api_key, or nil.
+  Returns :api_key or nil.
   """
-  @spec get_auth_method(Plug.Conn.t()) :: :oauth | :api_key | nil
+  @spec get_auth_method(Plug.Conn.t()) :: :api_key | nil
   def get_auth_method(conn) do
     Map.get(conn.assigns, :auth_method)
   end
 
   @doc """
-  Check if request was authenticated via OAuth.
-  """
-  @spec oauth_authenticated?(Plug.Conn.t()) :: boolean()
-  def oauth_authenticated?(conn) do
-    get_auth_method(conn) == :oauth
-  end
-
-  @doc """
   Build authorization options for passing to Authorization module.
 
-  Returns keyword list with :jwt_claims if OAuth authenticated.
+  Returns empty keyword list (reserved for future use).
   """
   @spec build_auth_opts(Plug.Conn.t()) :: keyword()
-  def build_auth_opts(conn) do
-    case get_jwt_claims(conn) do
-      nil -> []
-      claims -> [jwt_claims: claims]
-    end
+  def build_auth_opts(_conn) do
+    []
   end
 end

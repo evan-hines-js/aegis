@@ -231,79 +231,10 @@ defmodule Aegis.MCP.SSEConnection do
           api_key -> [{"authorization", "Bearer #{api_key}"}]
         end
 
-      :oauth ->
-        # SSE connections are Hub system operations for monitoring server changes
-        # This is legitimate use of Hub's own credentials for system monitoring
-        case get_hub_monitoring_token(server) do
-          {:ok, access_token} ->
-            [{"authorization", "Bearer #{access_token}"}]
-
-          {:error, reason} ->
-            Logger.warning(
-              "Failed to get Hub monitoring OAuth token for server #{server.name}: #{inspect(reason)}"
-            )
-
-            []
-        end
-
       _ ->
         # :none or any other type - no authentication headers
         []
     end
-  end
-
-  # Hub monitoring operations use Hub's own credentials for legitimate system functions
-  defp get_hub_monitoring_token(server) do
-    # For SSE monitoring, create a special Hub-to-Hub token for system operations
-    hub_service_id = get_hub_service_id()
-    now = DateTime.utc_now()
-
-    # Hub system monitoring token (no act claim needed - Hub acting for itself)
-    claims = %{
-      "iss" => get_hub_issuer_url(),
-      # Hub as the principal
-      "sub" => hub_service_id,
-      "aud" => server.endpoint,
-      "exp" => DateTime.add(now, 30, :minute) |> DateTime.to_unix(),
-      "iat" => DateTime.to_unix(now),
-      # System monitoring scopes
-      "scope" => "monitoring:read notifications:subscribe",
-      # Clear system operation marker
-      "purpose" => "hub_system_monitoring"
-    }
-
-    case create_hub_token(claims) do
-      {:ok, token} ->
-        Logger.debug("Hub monitoring token created for server #{server.name}")
-        {:ok, token}
-
-      {:error, reason} ->
-        Logger.error("Failed to create Hub monitoring token: #{reason}")
-        {:error, :token_creation_failed}
-    end
-  end
-
-  defp get_hub_service_id do
-    Application.get_env(:aegis, :hub_service_account_id, "aegis-mcp-hub")
-  end
-
-  # Create Hub token using JOSE (replacement for Guardian)
-  defp create_hub_token(claims) do
-    secret = Application.get_env(:aegis, :token_signing_secret) || "default-secret"
-    header = %{"alg" => "HS256", "typ" => "JWT"}
-
-    jwk = JOSE.JWK.from_oct(secret)
-    {_alg, token} = JOSE.JWT.sign(jwk, header, claims)
-
-    {:ok, token}
-  rescue
-    error ->
-      Logger.error("Hub token creation failed: #{inspect(error)}")
-      {:error, :jwt_creation_failed}
-  end
-
-  defp get_hub_issuer_url do
-    Application.get_env(:aegis, :hub_issuer_url, "https://aegis-mcp-hub.local")
   end
 
   defp handle_event(:ignore, _server, _parent), do: :ok

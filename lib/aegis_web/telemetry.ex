@@ -109,9 +109,9 @@ defmodule AegisWeb.Telemetry do
       ),
 
       # Plug Performance Metrics
-      summary("aegis.plug.oauth_auth.duration",
+      summary("aegis.plug.api_key_auth.duration",
         unit: {:native, :microsecond},
-        description: "OAuth/API key authentication plug duration",
+        description: "API key authentication plug duration",
         tags: []
       ),
       summary("aegis.plug.rate_limit.duration",
@@ -175,13 +175,6 @@ defmodule AegisWeb.Telemetry do
         unit: {:native, :microsecond},
         description: "Time to get prompts from backend servers",
         tags: [:client_id]
-      ),
-
-      # OAuth Token Exchange Metrics
-      summary("aegis.oauth.token_exchange.duration",
-        unit: {:native, :microsecond},
-        description: "Time to perform OAuth token exchange with identity chaining",
-        tags: [:server, :client_id, :resource_type, :action]
       ),
 
       # Cache Performance Metrics
