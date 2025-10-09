@@ -9,14 +9,14 @@ defmodule Aegis.MCP.ServerClient do
   require Logger
 
   alias Aegis.Cache
-  alias Aegis.MCP.{OAuthClient, Retry}
+  alias Aegis.MCP.Retry
 
   @type server :: %{name: String.t(), endpoint: String.t()}
   @type mcp_response :: {:ok, map()} | {:error, map()}
 
   @doc "Get all healthy servers from the cache"
   def get_healthy_servers do
-    case Aegis.MCP.list_servers(load: [:api_key, :oauth_client_secret]) do
+    case Aegis.MCP.list_servers(load: [:api_key]) do
       {:ok, servers} ->
         servers
         |> Enum.map(&map_server_with_cache_status/1)
@@ -39,10 +39,6 @@ defmodule Aegis.MCP.ServerClient do
           api_key: server.api_key,
           api_key_header: server.api_key_header,
           api_key_template: server.api_key_template,
-          oauth_client_id: server.oauth_client_id,
-          oauth_client_secret: server.oauth_client_secret,
-          oauth_token_url: server.oauth_token_url,
-          oauth_scopes: server.oauth_scopes || [],
           status: Map.get(cached_info, :status, :unknown)
         }
 
@@ -54,10 +50,6 @@ defmodule Aegis.MCP.ServerClient do
           api_key: server.api_key,
           api_key_header: server.api_key_header,
           api_key_template: server.api_key_template,
-          oauth_client_id: server.oauth_client_id,
-          oauth_client_secret: server.oauth_client_secret,
-          oauth_token_url: server.oauth_token_url,
-          oauth_scopes: server.oauth_scopes || [],
           status: :unknown
         }
     end
@@ -374,11 +366,12 @@ defmodule Aegis.MCP.ServerClient do
   defp build_headers_for_auth_type(server, :api_key, _opts) do
     case Map.get(server, :api_key) do
       api_key when is_binary(api_key) and api_key != "" ->
-        header_name = Map.get(server, :api_key_header, "Authorization")
+        # Handle nil api_key_header by providing default
+        header_name = Map.get(server, :api_key_header) || "Authorization"
         header_name_lower = String.downcase(header_name)
 
-        # Use template to format the API key value, default to "{API_KEY}"
-        template = Map.get(server, :api_key_template, "{API_KEY}")
+        # Handle nil api_key_template by providing default
+        template = Map.get(server, :api_key_template) || "{API_KEY}"
         header_value = String.replace(template, "{API_KEY}", api_key)
 
         [{header_name_lower, header_value}]
@@ -388,44 +381,5 @@ defmodule Aegis.MCP.ServerClient do
     end
   end
 
-  defp build_headers_for_auth_type(server, :oauth, opts) do
-    client_id = Keyword.get(opts, :client_id)
-
-    if is_nil(client_id) do
-      Logger.error(
-        "SECURITY: OAuth server #{server.name} requires client context - pass client_id option"
-      )
-
-      []
-    else
-      build_oauth_headers(server, opts)
-    end
-  end
-
   defp build_headers_for_auth_type(_server, _auth_type, _opts), do: []
-
-  defp build_oauth_headers(server, opts) do
-    client_id = Keyword.get(opts, :client_id)
-    resource_type = Keyword.get(opts, :resource_type)
-    resource_pattern = Keyword.get(opts, :resource_pattern)
-    action = Keyword.get(opts, :action)
-
-    case OAuthClient.get_access_token_with_context(
-           server,
-           client_id,
-           resource_type,
-           resource_pattern,
-           action
-         ) do
-      {:ok, delegated_token} ->
-        [{"authorization", "Bearer #{delegated_token}"}]
-
-      {:error, reason} ->
-        Logger.warning(
-          "Failed to get delegated OAuth token for client #{client_id} → server #{server.name}: #{inspect(reason)}"
-        )
-
-        []
-    end
-  end
 end

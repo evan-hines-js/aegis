@@ -214,30 +214,16 @@ defmodule Aegis.MCP.Authorization do
   def authenticate_client(_), do: {:error, :invalid_api_key}
 
   @doc """
-  Authenticate a client using a JWT token.
-  """
-  @spec authenticate_jwt_client(String.t()) :: AuthorizationErrors.jwt_client_result()
-  def authenticate_jwt_client(jwt_token) when is_binary(jwt_token) do
-    # JWT tokens are validated in real-time (no caching for security)
-    # since they can contain dynamic scopes and expiration info
-    result = PermissionStore.validate_jwt_token(jwt_token)
+  Authenticate a client using a bearer token (API key only).
 
-    result
-  end
-
-  def authenticate_jwt_client(_), do: {:error, :invalid_jwt_token}
-
-  @doc """
-  Authenticate a client using either an API key or JWT token.
-
-  Automatically detects the token type and uses the appropriate authentication method.
+  Only API keys starting with 'ak_' are supported.
   """
   @spec authenticate_bearer_token(String.t()) :: client_result()
   def authenticate_bearer_token(token) when is_binary(token) do
     if String.starts_with?(token, "ak_") do
       authenticate_client(token)
     else
-      authenticate_jwt_client(token)
+      {:error, :invalid_token}
     end
   end
 
@@ -250,8 +236,8 @@ defmodule Aegis.MCP.Authorization do
   provided token matches the expected client_id from the session. It uses the
   same cached lookup as authentication but does not log authentication events.
 
-  Returns {:ok, client_id} if the token is valid and belongs to the expected client,
-  {:error, reason} otherwise.
+  Only API keys are supported. Returns {:ok, client_id} if the token is valid and belongs
+  to the expected client, {:error, reason} otherwise.
   """
   @spec validate_token_for_client(String.t(), String.t()) ::
           {:ok, String.t()} | {:error, AuthorizationErrors.authorization_error()}
@@ -260,7 +246,7 @@ defmodule Aegis.MCP.Authorization do
     if String.starts_with?(token, "ak_") do
       validate_api_key_for_client(token, expected_client_id)
     else
-      validate_jwt_for_client(token, expected_client_id)
+      {:error, :invalid_token}
     end
   end
 
@@ -454,19 +440,6 @@ defmodule Aegis.MCP.Authorization do
     end
   end
 
-  # Validate JWT token belongs to expected client without logging
-  defp validate_jwt_for_client(jwt_token, expected_client_id) do
-    # JWT tokens are validated in real-time (no caching for security)
-    result = PermissionStore.validate_jwt_token(jwt_token)
-
-    case result do
-      {:ok, client} when client.id == expected_client_id -> {:ok, client.id}
-      # Wrong client
-      {:ok, _client} -> {:error, :invalid_jwt_token}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
   # Check if permissions contain a matching permission using pattern matching
   defp has_matching_permission?(permissions, resource_type, server_name, resource_pattern, action) do
     Enum.any?(permissions, fn permission ->
@@ -481,37 +454,10 @@ defmodule Aegis.MCP.Authorization do
   end
 
   # Validate OAuth scopes if JWT claims are present
-  defp validate_oauth_scopes(nil, _resource_type, _action) do
-    # No JWT claims - API key authentication, no scope validation needed
+  # OAuth removed - API key authentication only
+  defp validate_oauth_scopes(_jwt_claims, _resource_type, _action) do
     :ok
   end
-
-  defp validate_oauth_scopes(jwt_claims, resource_type, action) when is_map(jwt_claims) do
-    alias Aegis.MCP.OAuth.JWTService
-
-    # OAuth scopes are advisory only - we rely on our permission system for enforcement
-    # This just logs if the token doesn't have the expected scopes for debugging
-    required_scope = map_to_oauth_scope(resource_type, action)
-
-    if required_scope && !JWTService.has_required_scopes?(jwt_claims, [required_scope]) do
-      Logger.debug(
-        "OAuth scope advisory: Token missing scope '#{required_scope}'. " <>
-          "Token has: #{inspect(JWTService.extract_scopes(jwt_claims))}. " <>
-          "Access will be determined by permission system."
-      )
-    end
-
-    # Always return :ok - we rely on the permission system, not scopes
-    :ok
-  end
-
-  # Map MCP resource types and actions to OAuth scopes
-  defp map_to_oauth_scope(:tools, :call), do: "tools:call"
-  defp map_to_oauth_scope(:resources, :read), do: "resources:read"
-  defp map_to_oauth_scope(:prompts, :read), do: "prompts:read"
-  defp map_to_oauth_scope(:roots, :list), do: "roots:list"
-  defp map_to_oauth_scope(:sampling, :create), do: "sampling:create"
-  defp map_to_oauth_scope(_resource_type, _action), do: nil
 
   @doc """
   Get list of servers a client has access to.

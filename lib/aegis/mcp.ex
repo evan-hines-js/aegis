@@ -113,18 +113,5 @@ defmodule Aegis.MCP do
       define :list_clients_for_permission, action: :for_permission, args: [:permission_id]
       define :get_client_permission, action: :read, get_by: [:id]
     end
-
-    resource Aegis.MCP.OAuthToken do
-      define :create_oauth_token, action: :create_token
-      define :get_oauth_token_by_client, action: :by_client, args: [:client_id]
-
-      define :get_oauth_token_by_keycloak_client,
-        action: :by_keycloak_client_id,
-        args: [:keycloak_client_id]
-
-      define :update_oauth_token, action: :update
-      define :revoke_oauth_token, action: :revoke_token
-      define :list_oauth_tokens, action: :read
-    end
   end
 end

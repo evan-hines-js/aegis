@@ -22,15 +22,10 @@ defmodule AegisWeb.Router do
     plug :set_actor, :user
   end
 
-  pipeline :oauth_public do
-    plug :accepts, ["json", "event-stream"]
-    # No authentication required for OAuth bootstrap endpoints
-  end
-
   pipeline :mcp do
     plug :accepts, ["json", "event-stream"]
     plug Aegis.MCP.RequestContextPlug
-    plug Aegis.MCP.Plugs.OAuthAuthenticationPlug, allow_api_key: true
+    plug Aegis.MCP.ApiKeyAuthPlug
   end
 
   scope "/", AegisWeb do
@@ -64,63 +59,6 @@ defmodule AegisWeb.Router do
     forward "/", AegisWeb.AshJsonApiRouter
   end
 
-  # OAuth Authorization Server proxy endpoints
-  scope "/oauth", AegisWeb.OAuth do
-    pipe_through [:oauth_public]
-
-    # OAuth Authorization Server Metadata (RFC 8414)
-    get "/.well-known/openid-configuration",
-        DiscoveryController,
-        :oauth_authorization_server_metadata
-
-    options "/.well-known/openid-configuration", DiscoveryController, :options
-
-    # OAuth Protocol endpoints (proxy with CORS)
-    post "/realms/:realm/protocol/openid-connect/token", ProxyController, :proxy_token
-
-    get "/realms/:realm/protocol/openid-connect/auth",
-        ProxyController,
-        :proxy_authorization
-
-    get "/realms/:realm/protocol/openid-connect/userinfo",
-        ProxyController,
-        :proxy_userinfo
-
-    get "/realms/:realm/protocol/openid-connect/certs", ProxyController, :proxy_jwks
-    options "/realms/:realm/protocol/openid-connect/token", ProxyController, :options
-    options "/realms/:realm/protocol/openid-connect/auth", ProxyController, :options
-    options "/realms/:realm/protocol/openid-connect/userinfo", ProxyController, :options
-    options "/realms/:realm/protocol/openid-connect/certs", ProxyController, :options
-
-    # OAuth callback proxy endpoint
-    get "/callback/proxy", ProxyController, :proxy_callback
-
-    # Client Registration endpoints (proxy with CORS)
-    post "/realms/:realm/clients-registrations/openid-connect",
-         RegistrationController,
-         :register_client
-
-    get "/realms/:realm/clients-registrations/openid-connect/:client_id",
-        RegistrationController,
-        :get_client
-
-    put "/realms/:realm/clients-registrations/openid-connect/:client_id",
-        RegistrationController,
-        :update_client
-
-    delete "/realms/:realm/clients-registrations/openid-connect/:client_id",
-           RegistrationController,
-           :delete_client
-
-    options "/realms/:realm/clients-registrations/openid-connect",
-            RegistrationController,
-            :options
-
-    options "/realms/:realm/clients-registrations/openid-connect/:client_id",
-            RegistrationController,
-            :options
-  end
-
   scope "/", AegisWeb do
     pipe_through [:mcp]
 
@@ -134,59 +72,6 @@ defmodule AegisWeb.Router do
     pipe_through [:api]
 
     get "/api/health", HealthController, :index
-  end
-
-  scope "/", AegisWeb.OAuth do
-    pipe_through [:api]
-
-    # OAuth 2.0 Protected Resource Metadata endpoints (RFC 9728)
-    get "/.well-known/oauth-protected-resource", DiscoveryController, :root_metadata
-    options "/.well-known/oauth-protected-resource", DiscoveryController, :options
-    get "/.well-known/oauth-protected-resource/*path", DiscoveryController, :path_metadata
-    options "/.well-known/oauth-protected-resource/*path", DiscoveryController, :options
-
-    # OAuth 2.0 Authorization Server Metadata endpoint (RFC 8414)
-    get "/.well-known/oauth-authorization-server",
-        DiscoveryController,
-        :authorization_server_metadata
-
-    get "/.well-known/oauth-authorization-server/oauth",
-        DiscoveryController,
-        :oauth_authorization_server_metadata
-
-    options "/.well-known/oauth-authorization-server", DiscoveryController, :options
-    options "/.well-known/oauth-authorization-server/oauth", DiscoveryController, :options
-
-    # OpenID Connect Discovery endpoint
-    get "/.well-known/openid-configuration", DiscoveryController, :openid_configuration
-
-    get "/.well-known/openid-configuration/oauth",
-        DiscoveryController,
-        :oauth_authorization_server_metadata
-
-    options "/.well-known/openid-configuration", DiscoveryController, :options
-    options "/.well-known/openid-configuration/oauth", DiscoveryController, :options
-
-    # Client Registration endpoints (proxy with CORS)
-    post "/realms/:realm/clients-registrations/openid-connect",
-         RegistrationController,
-         :register_client
-
-    options "/realms/:realm/clients-registrations/openid-connect",
-            RegistrationController,
-            :options
-
-    get "/realms/:realm/clients-registrations/openid-connect/:client_id",
-        RegistrationController,
-        :get_client
-
-    put "/realms/:realm/clients-registrations/openid-connect/:client_id",
-        RegistrationController,
-        :update_client
-
-    delete "/realms/:realm/clients-registrations/openid-connect/:client_id",
-           RegistrationController,
-           :delete_client
   end
 
   scope "/", AegisWeb do

@@ -63,7 +63,7 @@ defmodule AegisWeb.Admin.ServersLive do
 
   def handle_event("edit_server", %{"server_id" => server_id}, socket) do
     # Load server with sensitive fields for editing
-    server = Aegis.MCP.get_server!(server_id, load: [:api_key, :oauth_client_secret])
+    server = Aegis.MCP.get_server!(server_id, load: [:api_key])
 
     socket =
       socket
@@ -130,7 +130,7 @@ defmodule AegisWeb.Admin.ServersLive do
 
   def handle_event("test_connectivity", %{"server_id" => server_id}, socket) do
     # Load server with sensitive fields for authentication during testing
-    server = Aegis.MCP.get_server!(server_id, load: [:api_key, :oauth_client_secret])
+    server = Aegis.MCP.get_server!(server_id, load: [:api_key])
 
     case test_server_connection(server) do
       {:ok, _response} ->
@@ -313,30 +313,7 @@ defmodule AegisWeb.Admin.ServersLive do
   end
 
   defp process_auth_params(server_params) do
-    server_params
-    |> process_oauth_scopes()
-    |> clear_irrelevant_auth_fields()
-  end
-
-  defp process_oauth_scopes(server_params) do
-    case Map.get(server_params, "oauth_scopes") do
-      nil ->
-        server_params
-
-      "" ->
-        Map.put(server_params, "oauth_scopes", [])
-
-      scopes_string when is_binary(scopes_string) ->
-        scopes =
-          scopes_string
-          |> String.split()
-          |> Enum.reject(&(&1 == ""))
-
-        Map.put(server_params, "oauth_scopes", scopes)
-
-      _ ->
-        server_params
-    end
+    clear_irrelevant_auth_fields(server_params)
   end
 
   defp clear_irrelevant_auth_fields(server_params) do
@@ -348,23 +325,10 @@ defmodule AegisWeb.Admin.ServersLive do
         |> Map.put("api_key", nil)
         |> Map.put("api_key_header", nil)
         |> Map.put("api_key_template", nil)
-        |> Map.put("oauth_client_id", nil)
-        |> Map.put("oauth_client_secret", nil)
-        |> Map.put("oauth_token_url", nil)
-        |> Map.put("oauth_scopes", [])
 
       "api_key" ->
+        # Keep API key fields as-is
         server_params
-        |> Map.put("oauth_client_id", nil)
-        |> Map.put("oauth_client_secret", nil)
-        |> Map.put("oauth_token_url", nil)
-        |> Map.put("oauth_scopes", [])
-
-      "oauth" ->
-        server_params
-        |> Map.put("api_key", nil)
-        |> Map.put("api_key_header", nil)
-        |> Map.put("api_key_template", nil)
 
       _ ->
         server_params
@@ -386,11 +350,7 @@ defmodule AegisWeb.Admin.ServersLive do
       auth_type: server.auth_type || :none,
       api_key: server.api_key,
       api_key_header: server.api_key_header,
-      api_key_template: server.api_key_template,
-      oauth_client_id: server.oauth_client_id,
-      oauth_client_secret: server.oauth_client_secret,
-      oauth_token_url: server.oauth_token_url,
-      oauth_scopes: server.oauth_scopes || []
+      api_key_template: server.api_key_template
     }
 
     # Fetch capabilities using the standard capability aggregator

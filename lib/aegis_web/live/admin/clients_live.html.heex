@@ -42,74 +42,9 @@
             />
           </div>
 
-          <.form_section title="Authentication Configuration">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label
-                  for="client_auth_type"
-                  class="block text-sm font-medium leading-6 text-gray-900"
-                >
-                  Authentication Type
-                </label>
-                <select
-                  id="client_auth_type"
-                  name="client[auth_type]"
-                  phx-change="auth_type_changed"
-                  class="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                >
-                  <option
-                    value="api_key"
-                    selected={!@editing_client || @editing_client.auth_type == :api_key}
-                  >
-                    API Key (default)
-                  </option>
-                  <option
-                    value="oauth"
-                    selected={@editing_client && @editing_client.auth_type == :oauth}
-                  >
-                    OAuth 2.0
-                  </option>
-                </select>
-                <p class="mt-1 text-sm text-gray-500">
-                  API Key: Traditional API key authentication. OAuth 2.0: Use Keycloak/OIDC for authentication.
-                </p>
-              </div>
-
-              <%= if (@selected_auth_type || (@editing_client && @editing_client.auth_type)) == :oauth do %>
-                <div>
-                  <.input
-                    type="text"
-                    name="client[oauth_client_id]"
-                    label="OAuth Client ID"
-                    placeholder="e.g., mcp-hub-client"
-                    value={
-                      if @editing_client, do: @editing_client.oauth_client_id || "", else: ""
-                    }
-                    required
-                  />
-                  <p class="mt-1 text-sm text-gray-500">
-                    The client ID from your OAuth provider (Okta, Keycloak, Entra ID, etc.)
-                  </p>
-                </div>
-
-                <div>
-                  <.input
-                    type="text"
-                    name="client[oauth_issuer_url]"
-                    label="OAuth Issuer URL"
-                    placeholder="e.g., https://your-company.okta.com/oauth2/default"
-                    value={
-                      if @editing_client, do: @editing_client.oauth_issuer_url || "", else: ""
-                    }
-                    required
-                  />
-                  <p class="mt-1 text-sm text-gray-500">
-                    The issuer URL from your OAuth provider where we'll validate tokens
-                  </p>
-                </div>
-              <% end %>
-            </div>
-          </.form_section>
+          <div class="text-sm text-gray-600">
+            Clients use API key authentication. An API key will be generated automatically.
+          </div>
 
           <.form_section title="Server Permissions" class="mt-6">
             <div class="space-y-4">

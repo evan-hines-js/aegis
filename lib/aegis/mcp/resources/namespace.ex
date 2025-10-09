@@ -71,10 +71,8 @@ defmodule Aegis.MCP.Namespace do
            endpoint: server_info.endpoint,
            auth_type: Map.get(server_info, :auth_type, :none),
            api_key: Map.get(server_info, :api_key),
-           oauth_client_id: Map.get(server_info, :oauth_client_id),
-           oauth_client_secret: Map.get(server_info, :oauth_client_secret),
-           oauth_token_url: Map.get(server_info, :oauth_token_url),
-           oauth_scopes: Map.get(server_info, :oauth_scopes, [])
+           api_key_header: Map.get(server_info, :api_key_header),
+           api_key_template: Map.get(server_info, :api_key_template)
          }}
 
       _ ->

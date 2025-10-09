@@ -3,7 +3,6 @@ defmodule AegisWeb.MCPController do
   require Logger
 
   alias Aegis.MCP.Handlers.InitializationHandler
-  alias Aegis.MCP.OAuth.WWWAuthenticate
 
   alias Aegis.MCP.{
     Constants,
@@ -355,7 +354,6 @@ defmodule AegisWeb.MCPController do
   @doc false
   defp handle_no_api_key_error(conn) do
     conn
-    |> put_resp_header("www-authenticate", WWWAuthenticate.generate_header(conn))
     |> send_jsonrpc_error(
       :unauthorized,
       -32_603,
@@ -366,24 +364,12 @@ defmodule AegisWeb.MCPController do
   @doc false
   defp handle_invalid_api_key_error(conn) do
     conn
-    |> put_resp_header(
-      "www-authenticate",
-      WWWAuthenticate.generate_error_header(conn, "invalid_token", "Invalid API key")
-    )
     |> send_jsonrpc_error(:unauthorized, -32_603, "Invalid API key.")
   end
 
   @doc false
   defp handle_client_inactive_error(conn) do
     conn
-    |> put_resp_header(
-      "www-authenticate",
-      WWWAuthenticate.generate_error_header(
-        conn,
-        "invalid_token",
-        "Client account is inactive"
-      )
-    )
     |> send_jsonrpc_error(:unauthorized, -32_603, "Client account is inactive.")
   end
 

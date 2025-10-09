@@ -17,7 +17,7 @@ defmodule Aegis.MCP.Server do
 
   cloak do
     vault(Aegis.Vault)
-    attributes [:api_key, :oauth_client_secret]
+    attributes [:api_key]
   end
 
   code_interface do
@@ -40,11 +40,7 @@ defmodule Aegis.MCP.Server do
         :auth_type,
         :api_key,
         :api_key_header,
-        :api_key_template,
-        :oauth_client_id,
-        :oauth_client_secret,
-        :oauth_token_url,
-        :oauth_scopes
+        :api_key_template
       ]
 
       change after_transaction(fn _changeset, result, _context ->
@@ -75,10 +71,6 @@ defmodule Aegis.MCP.Server do
         :api_key,
         :api_key_header,
         :api_key_template,
-        :oauth_client_id,
-        :oauth_client_secret,
-        :oauth_token_url,
-        :oauth_scopes,
         :capabilities
       ]
 
@@ -132,7 +124,7 @@ defmodule Aegis.MCP.Server do
       allow_nil? false
       public? true
       default :none
-      constraints one_of: [:none, :oauth, :api_key]
+      constraints one_of: [:none, :api_key]
     end
 
     attribute :api_key, :string do
@@ -154,29 +146,6 @@ defmodule Aegis.MCP.Server do
       default "{API_KEY}"
 
       description "Template for API key value. Use {API_KEY} as placeholder (e.g., 'Bearer {API_KEY}', '{API_KEY}')"
-    end
-
-    # OAuth client configuration
-    attribute :oauth_client_id, :string do
-      allow_nil? true
-      public? true
-    end
-
-    attribute :oauth_client_secret, :string do
-      allow_nil? true
-      public? true
-      sensitive? true
-    end
-
-    attribute :oauth_token_url, :string do
-      allow_nil? true
-      public? true
-    end
-
-    attribute :oauth_scopes, {:array, :string} do
-      allow_nil? true
-      public? true
-      default []
     end
 
     attribute :capabilities, :map do

@@ -25,7 +25,6 @@ defmodule Aegis.MCP.Client do
     define :get_by_id, action: :read, get_by: [:id]
     define :get_by_name, action: :read, get_by: [:name]
     define :get_by_api_key, args: [:api_key]
-    define :get_by_oauth_client_id, action: :by_oauth_client_id, args: [:oauth_client_id]
     define :list, action: :read
     define :update
     define :regenerate_api_key
@@ -42,12 +41,7 @@ defmodule Aegis.MCP.Client do
       accept [
         :name,
         :description,
-        :active,
-        :auth_type,
-        :oauth_client_id,
-        :oauth_issuer_url,
-        :oauth_grant_types,
-        :oauth_scopes
+        :active
       ]
 
       change after_transaction(fn _changeset, result, _context ->
@@ -103,7 +97,6 @@ defmodule Aegis.MCP.Client do
         api_key_lookup_hash = lookup_hash_api_key(api_key)
 
         changeset
-        |> Ash.Changeset.change_attribute(:auth_type, :api_key)
         |> Ash.Changeset.change_attribute(:api_key_hash, api_key_hash)
         |> Ash.Changeset.change_attribute(:api_key_lookup_hash, api_key_lookup_hash)
         |> Ash.Changeset.after_action(fn _changeset, client ->
@@ -197,20 +190,6 @@ defmodule Aegis.MCP.Client do
         end
       end
     end
-
-    read :by_oauth_client_id do
-      description "Find MCP client by OAuth client ID for token mapping"
-      get? true
-
-      argument :oauth_client_id, :string do
-        allow_nil? false
-      end
-
-      filter expr(
-               auth_type == :oauth and oauth_client_id == ^arg(:oauth_client_id) and
-                 active == true
-             )
-    end
   end
 
   policies do
@@ -258,39 +237,6 @@ defmodule Aegis.MCP.Client do
       public? true
       default true
       description "Whether the client is active and can authenticate"
-    end
-
-    attribute :auth_type, :atom do
-      allow_nil? false
-      public? true
-      default :api_key
-      constraints one_of: [:api_key, :oauth]
-      description "Authentication method: :api_key for API key auth, :oauth for OAuth2 flow"
-    end
-
-    attribute :oauth_client_id, :string do
-      allow_nil? true
-      public? true
-      description "OAuth2 client ID from external provider (Okta, Keycloak, etc.)"
-    end
-
-    attribute :oauth_issuer_url, :string do
-      allow_nil? true
-      public? true
-      description "OAuth2 issuer URL (e.g., https://your-company.okta.com/oauth2/default)"
-    end
-
-    attribute :oauth_grant_types, {:array, :string} do
-      allow_nil? true
-      public? true
-      description "Supported OAuth2 grant types (informational, managed by external provider)"
-    end
-
-    attribute :oauth_scopes, {:array, :string} do
-      allow_nil? true
-      public? true
-      default []
-      description "Allowed OAuth2 scopes for this client"
     end
 
     create_timestamp :created_at

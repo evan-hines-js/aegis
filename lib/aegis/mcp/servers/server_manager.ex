@@ -15,7 +15,6 @@ defmodule Aegis.MCP.ServerManager do
     Authorization,
     CapabilityAggregator,
     Constants,
-    OAuthClient,
     ServerContentCache,
     ServerMonitorSupervisor,
     Session
@@ -111,7 +110,7 @@ defmodule Aegis.MCP.ServerManager do
     Logger.info("Received server_created event for #{server.name}")
 
     # Load sensitive fields to avoid NotLoaded errors
-    loaded_server = Ash.load!(server, [:api_key, :oauth_client_secret])
+    loaded_server = Ash.load!(server, [:api_key])
 
     # Load cached capabilities if available
     cached_capabilities = load_cached_capabilities(loaded_server.name)
@@ -120,10 +119,6 @@ defmodule Aegis.MCP.ServerManager do
       endpoint: loaded_server.endpoint,
       auth_type: loaded_server.auth_type || :none,
       api_key: loaded_server.api_key,
-      oauth_client_id: loaded_server.oauth_client_id,
-      oauth_client_secret: loaded_server.oauth_client_secret,
-      oauth_token_url: loaded_server.oauth_token_url,
-      oauth_scopes: loaded_server.oauth_scopes || [],
       status: :unknown,
       capabilities: cached_capabilities,
       last_check: nil,
@@ -144,7 +139,7 @@ defmodule Aegis.MCP.ServerManager do
     Logger.info("Received server_updated event for #{server.name}")
 
     # Load sensitive fields to avoid NotLoaded errors
-    loaded_server = Ash.load!(server, [:api_key, :oauth_client_secret])
+    loaded_server = Ash.load!(server, [:api_key])
     cache_key = {:server, server.name}
 
     case Cache.get(:mcp_meta_cache, cache_key) do
@@ -153,21 +148,12 @@ defmodule Aegis.MCP.ServerManager do
           current_info
           | endpoint: loaded_server.endpoint,
             auth_type: loaded_server.auth_type || :none,
-            api_key: loaded_server.api_key,
-            oauth_client_id: loaded_server.oauth_client_id,
-            oauth_client_secret: loaded_server.oauth_client_secret,
-            oauth_token_url: loaded_server.oauth_token_url,
-            oauth_scopes: loaded_server.oauth_scopes || []
+            api_key: loaded_server.api_key
         }
 
         Cache.put(:mcp_meta_cache, cache_key, updated_info,
           tags: ["server:#{server.name}", "servers"]
         )
-
-        # Invalidate OAuth token cache if OAuth config changed
-        if loaded_server.auth_type == :oauth do
-          OAuthClient.invalidate_token(loaded_server.name)
-        end
 
       _ ->
         # Server doesn't exist in registry, add it
@@ -178,10 +164,6 @@ defmodule Aegis.MCP.ServerManager do
           endpoint: loaded_server.endpoint,
           auth_type: loaded_server.auth_type || :none,
           api_key: loaded_server.api_key,
-          oauth_client_id: loaded_server.oauth_client_id,
-          oauth_client_secret: loaded_server.oauth_client_secret,
-          oauth_token_url: loaded_server.oauth_token_url,
-          oauth_scopes: loaded_server.oauth_scopes || [],
           status: :unknown,
           capabilities: cached_capabilities,
           last_check: nil,
@@ -244,7 +226,7 @@ defmodule Aegis.MCP.ServerManager do
     cached_names = MapSet.new(list_cached_server_names())
 
     # Get servers from database (single DB query)
-    db_servers = Aegis.MCP.list_servers!(load: [:api_key, :oauth_client_secret])
+    db_servers = Aegis.MCP.list_servers!(load: [:api_key])
     db_names = MapSet.new(db_servers, & &1.name)
 
     # Add servers that are in DB but missing from cache
@@ -280,10 +262,6 @@ defmodule Aegis.MCP.ServerManager do
       endpoint: server.endpoint,
       auth_type: server.auth_type || :none,
       api_key: server.api_key,
-      oauth_client_id: server.oauth_client_id,
-      oauth_client_secret: server.oauth_client_secret,
-      oauth_token_url: server.oauth_token_url,
-      oauth_scopes: server.oauth_scopes || [],
       status: :unknown,
       capabilities: cached_capabilities,
       last_check: nil,

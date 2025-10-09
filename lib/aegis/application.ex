@@ -7,11 +7,6 @@ defmodule Aegis.Application do
 
   @impl true
   def start(_type, _args) do
-    alias Aegis.MCP.OAuth
-
-    # Validate OAuth configuration at startup
-    OAuth.Config.validate_config!()
-
     children = [
       AegisWeb.Telemetry,
       Aegis.Vault,

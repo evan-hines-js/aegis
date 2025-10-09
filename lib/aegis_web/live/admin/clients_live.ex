@@ -24,7 +24,6 @@ defmodule AegisWeb.Admin.ClientsLive do
       |> assign(:page_size, 100)
       |> assign(:clients_page, nil)
       |> assign(:selected_permissions, %{})
-      |> assign(:selected_auth_type, :api_key)
       |> load_clients()
       |> load_permissions()
       |> load_servers()
@@ -49,7 +48,6 @@ defmodule AegisWeb.Admin.ClientsLive do
       socket
       |> assign(:show_form, true)
       |> assign(:form_mode, :create)
-      |> assign(:selected_auth_type, :api_key)
       |> assign(:editing_client, nil)
       |> assign(:selected_permissions, %{})
 
@@ -74,23 +72,15 @@ defmodule AegisWeb.Admin.ClientsLive do
       |> assign(:show_form, true)
       |> assign(:form_mode, :edit)
       |> assign(:editing_client, client)
-      |> assign(:selected_auth_type, client.auth_type)
 
     {:noreply, socket}
   end
 
-  def handle_event("auth_type_changed", %{"client" => %{"auth_type" => auth_type}}, socket) do
-    auth_type_atom = String.to_existing_atom(auth_type)
-    {:noreply, assign(socket, :selected_auth_type, auth_type_atom)}
-  end
-
   def handle_event("create_client", %{"client" => client_params} = params, socket) do
-    auth_type = Map.get(client_params, "auth_type", "api_key") |> String.to_existing_atom()
     base_params = Map.take(client_params, ["name", "description"])
 
     case Aegis.MCP.create_client(base_params) do
       {:ok, client} ->
-        client = maybe_configure_oauth(client, auth_type, client_params)
         ClientPermissionManager.sync_permissions(client.id, Map.get(params, "permissions", %{}))
 
         socket = build_success_response(socket, client)
@@ -103,9 +93,8 @@ defmodule AegisWeb.Admin.ClientsLive do
 
   def handle_event("update_client", %{"client" => client_params} = params, socket) do
     client = socket.assigns.editing_client
-    processed_params = Map.update(client_params, "auth_type", "api_key", & &1)
 
-    case Aegis.MCP.update_client(client, processed_params) do
+    case Aegis.MCP.update_client(client, client_params) do
       {:ok, _updated_client} ->
         ClientPermissionManager.sync_permissions(client.id, Map.get(params, "permissions", %{}))
 
@@ -281,37 +270,18 @@ defmodule AegisWeb.Admin.ClientsLive do
 
   # Helper functions
 
-  defp maybe_configure_oauth(client, :oauth, client_params) do
-    oauth_params = %{
-      "auth_type" => "oauth",
-      "oauth_client_id" => Map.get(client_params, "oauth_client_id"),
-      "oauth_issuer_url" => Map.get(client_params, "oauth_issuer_url")
-    }
-
-    case Aegis.MCP.update_client(client, oauth_params) do
-      {:ok, updated_client} -> updated_client
-      {:error, _} -> client
-    end
-  end
-
-  defp maybe_configure_oauth(client, _auth_type, _client_params), do: client
-
   defp build_success_response(socket, client) do
-    socket =
-      socket
-      |> put_flash(:info, "Client created successfully!")
-      |> assign(:show_form, false)
-      |> assign(:editing_client, nil)
-      |> assign(:form_mode, :create)
-      |> assign(:created_client, client)
-      |> load_clients()
+    # All clients now use API keys - get the plaintext key from metadata
+    api_key = Ash.Resource.get_metadata(client, :plaintext_api_key)
 
-    if client.auth_type == :api_key do
-      api_key = Ash.Resource.get_metadata(client, :plaintext_api_key)
-      assign(socket, :api_key, api_key)
-    else
-      assign(socket, :api_key, nil)
-    end
+    socket
+    |> put_flash(:info, "Client created successfully!")
+    |> assign(:show_form, false)
+    |> assign(:editing_client, nil)
+    |> assign(:form_mode, :create)
+    |> assign(:created_client, client)
+    |> assign(:api_key, api_key)
+    |> load_clients()
   end
 
   defp load_clients(socket) do

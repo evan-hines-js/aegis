@@ -418,17 +418,15 @@ defmodule Aegis.MCP.ServerMonitor do
   defp load_server_from_db(server_name) do
     case Aegis.MCP.get_server_by_name(server_name) do
       {:ok, server} ->
-        loaded_server = Ash.load!(server, [:api_key, :oauth_client_secret])
+        loaded_server = Ash.load!(server, [:api_key])
 
         %{
           name: loaded_server.name,
           endpoint: loaded_server.endpoint,
           auth_type: loaded_server.auth_type || :none,
           api_key: loaded_server.api_key,
-          oauth_client_id: loaded_server.oauth_client_id,
-          oauth_client_secret: loaded_server.oauth_client_secret,
-          oauth_token_url: loaded_server.oauth_token_url,
-          oauth_scopes: loaded_server.oauth_scopes || []
+          api_key_header: loaded_server.api_key_header,
+          api_key_template: loaded_server.api_key_template
         }
 
       {:error, reason} ->

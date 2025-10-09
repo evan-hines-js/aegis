@@ -67,12 +67,6 @@
                 >
                   API Key
                 </option>
-                <option
-                  value="oauth"
-                  selected={@editing_server && @editing_server.auth_type == :oauth}
-                >
-                  OAuth 2.0 (Client Credentials)
-                </option>
               </select>
             </div>
 
@@ -132,67 +126,6 @@
                 Use {API_KEY} as a placeholder in the template. Example: "{API_KEY}" or "Bearer {API_KEY}"
               </p>
             </div>
-
-            <div class={[
-              "space-y-4 transition-all duration-200",
-              if(
-                (@editing_server && @editing_server.auth_type == :oauth) ||
-                  @selected_auth_type == "oauth",
-                do: "opacity-100",
-                else: "opacity-50"
-              )
-            ]}>
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <.input
-                  type="text"
-                  name="server[oauth_client_id]"
-                  label="OAuth Client ID"
-                  placeholder="Client identifier for OAuth 2.0"
-                  value={if @editing_server, do: @editing_server.oauth_client_id, else: ""}
-                  disabled={
-                    not ((@editing_server && @editing_server.auth_type == :oauth) ||
-                           @selected_auth_type == "oauth")
-                  }
-                />
-                <.input
-                  type="password"
-                  name="server[oauth_client_secret]"
-                  label="OAuth Client Secret"
-                  placeholder="Client secret for OAuth 2.0"
-                  value={if @editing_server, do: @editing_server.oauth_client_secret, else: ""}
-                  disabled={
-                    not ((@editing_server && @editing_server.auth_type == :oauth) ||
-                           @selected_auth_type == "oauth")
-                  }
-                />
-              </div>
-              <.input
-                type="url"
-                name="server[oauth_token_url]"
-                label="OAuth Token URL"
-                placeholder="https://auth.example.com/oauth/token"
-                value={if @editing_server, do: @editing_server.oauth_token_url, else: ""}
-                disabled={
-                  not ((@editing_server && @editing_server.auth_type == :oauth) ||
-                         @selected_auth_type == "oauth")
-                }
-              />
-              <.input
-                type="text"
-                name="server[oauth_scopes]"
-                label="OAuth Scopes (optional)"
-                placeholder="space-separated scopes: read write admin"
-                value={
-                  if @editing_server && @editing_server.oauth_scopes,
-                    do: Enum.join(@editing_server.oauth_scopes, " "),
-                    else: ""
-                }
-                disabled={
-                  not ((@editing_server && @editing_server.auth_type == :oauth) ||
-                         @selected_auth_type == "oauth")
-                }
-              />
-            </div>
           </.form_section>
 
           <%= if @form_mode == :create do %>
@@ -241,7 +174,6 @@
               <.badge status={server.auth_type}>
                 {case server.auth_type do
                   :api_key -> "API Key"
-                  :oauth -> "OAuth"
                   _ -> "None"
                 end}
               </.badge>
