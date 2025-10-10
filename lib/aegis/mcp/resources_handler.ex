@@ -24,11 +24,11 @@ defmodule Aegis.MCP.Handlers.ResourcesHandler do
 
   Returns all resources from servers the client has access to with pagination support.
   """
-  @spec handle_list(String.t() | nil, String.t(), map(), map(), keyword()) ::
+  @spec handle_list(String.t() | nil, String.t(), map(), map()) ::
           {:ok, map()} | {:error, map()}
-  def handle_list(session_id, client_id, pagination_tokens, params, auth_opts \\ [])
+  def handle_list(session_id, client_id, pagination_tokens, params)
 
-  def handle_list(session_id, client_id, _pagination_tokens, params, _auth_opts) do
+  def handle_list(session_id, client_id, _pagination_tokens, params) do
     Pagination.handle_paginated_list(
       session_id,
       client_id,
@@ -44,14 +44,13 @@ defmodule Aegis.MCP.Handlers.ResourcesHandler do
 
   Returns resource templates from servers the client has access to.
   """
-  @spec handle_templates_list(String.t() | nil, String.t(), map(), map(), keyword()) ::
+  @spec handle_templates_list(String.t() | nil, String.t(), map(), map()) ::
           {:ok, map()} | {:error, map()}
   def handle_templates_list(
         _session_id,
         client_id,
         _pagination_tokens,
-        params,
-        _auth_opts \\ []
+        params
       ) do
     Logger.debug("handle_templates_list called with client_id: #{client_id}")
 
@@ -102,9 +101,9 @@ defmodule Aegis.MCP.Handlers.ResourcesHandler do
   Reads a specific resource with proper URI parsing and session management.
   Input validation is performed by InputValidationPlug before reaching this handler.
   """
-  @spec handle_read(String.t() | nil, String.t(), map(), map(), keyword()) ::
+  @spec handle_read(String.t() | nil, String.t(), map(), map()) ::
           {:ok, map()} | {:error, map()}
-  def handle_read(session_id, client_id, backend_sessions, params, auth_opts \\ [])
+  def handle_read(session_id, client_id, backend_sessions, params)
 
   def handle_read(
         session_id,
@@ -112,8 +111,7 @@ defmodule Aegis.MCP.Handlers.ResourcesHandler do
         backend_sessions,
         %{
           "params" => %{"uri" => namespaced_uri}
-        },
-        _auth_opts
+        }
       ) do
     start_time = System.monotonic_time()
 
@@ -141,7 +139,7 @@ defmodule Aegis.MCP.Handlers.ResourcesHandler do
     result
   end
 
-  def handle_read(_session_id, _client_id, _backend_sessions, _params, _auth_opts) do
+  def handle_read(_session_id, _client_id, _backend_sessions, _params) do
     {:error,
      ErrorResponse.build_error(
        ErrorResponse.invalid_params(),

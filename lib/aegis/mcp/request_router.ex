@@ -43,13 +43,11 @@ defmodule Aegis.MCP.RequestRouter do
 
   @doc """
   Route MCP request - stateless requests bypass GenServer.
-
-  Accepts optional conn for OAuth context (JWT claims).
   """
-  def route_request(session_id, method, params, conn \\ nil) do
+  def route_request(session_id, method, params) do
     cond do
       method in @stateless_methods ->
-        handle_stateless_request(session_id, method, params, conn)
+        handle_stateless_request(session_id, method, params)
 
       method in @stateful_methods ->
         # Delegate to Session GenServer for stateful operations
@@ -70,10 +68,10 @@ defmodule Aegis.MCP.RequestRouter do
   end
 
   # Handle stateless requests by reading from ETS cache
-  defp handle_stateless_request(session_id, method, params, conn) do
+  defp handle_stateless_request(session_id, method, params) do
     case SessionCache.get(session_id) do
       {:ok, %{client_id: client_id, backend_sessions: backend_sessions}} ->
-        route_to_handler(session_id, client_id, backend_sessions, method, params, conn)
+        route_to_handler(session_id, client_id, backend_sessions, method, params)
 
       {:error, :not_found} ->
         {:error,
@@ -89,24 +87,18 @@ defmodule Aegis.MCP.RequestRouter do
   # Used by both stateful mode (with session_id) and stateless mode (session_id = nil).
   # Stateless mode is useful for serverless clients (Lambda, Workers) that make
   # one-off requests without maintaining sessions.
-  # Accepts optional conn for OAuth context (JWT claims).
   @spec route_to_handler(
           String.t() | nil,
           String.t(),
           map(),
           String.t(),
-          map(),
-          Plug.Conn.t() | nil
+          map()
         ) ::
           {:ok, map()} | {:error, map()}
-  def route_to_handler(session_id, client_id, backend_sessions, method, params, conn \\ nil) do
+  def route_to_handler(session_id, client_id, backend_sessions, method, params) do
     start_time = System.monotonic_time()
-    alias Aegis.MCP.Auth.RequestContext
 
     empty_pagination_tokens = %{}
-
-    # Extract OAuth context from conn if available
-    auth_opts = if conn, do: RequestContext.build_auth_opts(conn), else: []
 
     result =
       case method do
@@ -115,8 +107,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             empty_pagination_tokens,
-            params,
-            auth_opts
+            params
           )
 
         "tools/call" ->
@@ -124,8 +115,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             backend_sessions,
-            params,
-            auth_opts
+            params
           )
 
         "resources/list" ->
@@ -133,8 +123,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             empty_pagination_tokens,
-            params,
-            auth_opts
+            params
           )
 
         "resources/read" ->
@@ -142,8 +131,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             backend_sessions,
-            params,
-            auth_opts
+            params
           )
 
         "resources/templates/list" ->
@@ -151,8 +139,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             empty_pagination_tokens,
-            params,
-            auth_opts
+            params
           )
 
         "prompts/list" ->
@@ -160,8 +147,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             empty_pagination_tokens,
-            params,
-            auth_opts
+            params
           )
 
         "prompts/get" ->
@@ -169,8 +155,7 @@ defmodule Aegis.MCP.RequestRouter do
             session_id,
             client_id,
             backend_sessions,
-            params,
-            auth_opts
+            params
           )
       end
 

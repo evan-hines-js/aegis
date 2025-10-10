@@ -24,11 +24,11 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
   Returns all tools from servers the client has access to with pagination support.
   Supports both stateful (with session_id) and stateless (session_id = nil) modes.
   """
-  @spec handle_list(String.t() | nil, String.t(), map(), map(), keyword()) ::
+  @spec handle_list(String.t() | nil, String.t(), map(), map()) ::
           {:ok, map()} | {:error, map()}
-  def handle_list(session_id, client_id, pagination_tokens, params, auth_opts \\ [])
+  def handle_list(session_id, client_id, pagination_tokens, params)
 
-  def handle_list(session_id, client_id, _pagination_tokens, params, _auth_opts) do
+  def handle_list(session_id, client_id, _pagination_tokens, params) do
     Pagination.handle_paginated_list(
       session_id,
       client_id,
@@ -45,9 +45,9 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
   Executes a tool with proper authorization and session management.
   Input validation is performed by InputValidationPlug before reaching this handler.
   """
-  @spec handle_call(String.t() | nil, String.t(), map(), map(), keyword()) ::
+  @spec handle_call(String.t() | nil, String.t(), map(), map()) ::
           {:ok, map()} | {:error, map()}
-  def handle_call(session_id, client_id, backend_sessions, params, auth_opts \\ [])
+  def handle_call(session_id, client_id, backend_sessions, params)
 
   def handle_call(
         session_id,
@@ -55,8 +55,7 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
         backend_sessions,
         %{
           "params" => %{"name" => namespaced_tool_name}
-        } = params,
-        auth_opts
+        } = params
       ) do
     arguments = get_in(params, ["params", "arguments"]) || %{}
 
@@ -66,12 +65,11 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
       backend_sessions,
       namespaced_tool_name,
       arguments,
-      params,
-      auth_opts
+      params
     )
   end
 
-  def handle_call(_session_id, _client_id, _backend_sessions, _params, _auth_opts) do
+  def handle_call(_session_id, _client_id, _backend_sessions, _params) do
     {:error,
      ErrorResponse.build_error(
        ErrorResponse.invalid_params(),
@@ -114,8 +112,7 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
          backend_sessions,
          namespaced_tool_name,
          arguments,
-         params,
-         auth_opts
+         params
        ) do
     case Namespace.parse_namespaced_tool(namespaced_tool_name) do
       {:ok, server_name, tool_name} ->
@@ -128,8 +125,7 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
               server,
               tool_name,
               arguments,
-              params,
-              auth_opts
+              params
             )
 
           {:error, :not_found} ->
@@ -158,10 +154,9 @@ defmodule Aegis.MCP.Handlers.ToolsHandler do
          server,
          tool_name,
          arguments,
-         params,
-         auth_opts
+         params
        ) do
-    case Authorization.can_call_tool?(client_id, server.name, tool_name, auth_opts) do
+    case Authorization.can_call_tool?(client_id, server.name, tool_name) do
       {:ok, :authorized} ->
         # Broadcast tool usage for analytics
         broadcast_tool_usage(client_id, session_id, server.name, tool_name)

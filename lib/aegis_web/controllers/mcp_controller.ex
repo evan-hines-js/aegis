@@ -390,7 +390,7 @@ defmodule AegisWeb.MCPController do
         case extract_client_id(conn) do
           {:ok, client_id} ->
             # Call handler directly with nil session_id and empty backend_sessions
-            RequestRouter.route_to_handler(nil, client_id, %{}, method, params, conn)
+            RequestRouter.route_to_handler(nil, client_id, %{}, method, params)
 
           {:error, reason} ->
             {:error, ErrorResponse.build_error(ErrorResponse.invalid_request(), inspect(reason))}
@@ -398,7 +398,7 @@ defmodule AegisWeb.MCPController do
 
       session_id when is_binary(session_id) ->
         # Stateful mode
-        RequestRouter.route_request(session_id, method, params, conn)
+        RequestRouter.route_request(session_id, method, params)
     end
   end
 

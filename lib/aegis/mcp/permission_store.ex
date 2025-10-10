@@ -22,16 +22,6 @@ defmodule Aegis.MCP.PermissionStore do
 
   @doc """
   Validate that a client exists and is active.
-
-  FIXED: PRODUCTION CI ISSUE #3 - JWT CLIENT LOOKUP
-  ✅ Updated JWT validation to use OAuth token mapping (see jwt_validator.ex)
-  ✅ Now uses 'azp' claim (Keycloak client ID) instead of 'sub' claim (user ID)
-  ✅ Correctly looks up oauth_tokens table to find associated MCP client
-
-  REMAINING CI SETUP NEEDED:
-  - Ensure OAuth token records exist in database for Keycloak clients
-  - Verify OAuth registration flow creates proper client -> token mappings
-  - Check that oauth_tokens.keycloak_client_id matches JWT 'azp' claim values
   """
   @spec validate_client(String.t()) :: client_result()
   def validate_client(client_id) do

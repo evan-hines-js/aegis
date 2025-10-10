@@ -41,9 +41,9 @@ defmodule Aegis.MCP.Authorization do
   @doc """
   Check if a client can call a specific tool.
   """
-  @spec can_call_tool?(String.t(), String.t(), String.t(), keyword()) :: authorization_result()
-  def can_call_tool?(client_id, server_name, tool_name, opts \\ []) do
-    check_permission(client_id, :tools, server_name, tool_name, :call, opts)
+  @spec can_call_tool?(String.t(), String.t(), String.t()) :: authorization_result()
+  def can_call_tool?(client_id, server_name, tool_name) do
+    check_permission(client_id, :tools, server_name, tool_name, :call)
   end
 
   @doc """
@@ -51,15 +51,14 @@ defmodule Aegis.MCP.Authorization do
 
   This ensures the Hub validates permissions before accessing resources on behalf of clients.
   """
-  @spec check_permission(String.t(), atom(), String.t(), String.t(), atom(), keyword()) ::
+  @spec check_permission(String.t(), atom(), String.t(), String.t(), atom()) ::
           authorization_result()
   def check_permission(
         client_id,
         resource_type,
         server_name,
         resource_pattern,
-        action,
-        opts \\ []
+        action
       ) do
     with {:ok, _client} <- validate_client(client_id),
          {:ok, permissions} <- get_client_permissions(client_id),
@@ -88,18 +87,18 @@ defmodule Aegis.MCP.Authorization do
   @doc """
   Check if a client can read a specific resource.
   """
-  @spec can_read_resource?(String.t(), String.t(), String.t(), keyword()) ::
+  @spec can_read_resource?(String.t(), String.t(), String.t()) ::
           authorization_result()
-  def can_read_resource?(client_id, server_name, resource_uri, opts \\ []) do
-    check_permission(client_id, :resources, server_name, resource_uri, :read, opts)
+  def can_read_resource?(client_id, server_name, resource_uri) do
+    check_permission(client_id, :resources, server_name, resource_uri, :read)
   end
 
   @doc """
   Check if a client can get a specific prompt.
   """
-  @spec can_get_prompt?(String.t(), String.t(), String.t(), keyword()) :: authorization_result()
-  def can_get_prompt?(client_id, server_name, prompt_name, opts \\ []) do
-    check_permission(client_id, :prompts, server_name, prompt_name, :read, opts)
+  @spec can_get_prompt?(String.t(), String.t(), String.t()) :: authorization_result()
+  def can_get_prompt?(client_id, server_name, prompt_name) do
+    check_permission(client_id, :prompts, server_name, prompt_name, :read)
   end
 
   @doc """

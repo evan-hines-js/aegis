@@ -22,10 +22,10 @@ defmodule Aegis.MCP.Handlers.PromptsHandler do
 
   Returns prompts that the client has permission to access with pagination support.
   """
-  @spec handle_list(String.t() | nil, String.t(), map(), map(), keyword()) :: {:ok, map()}
-  def handle_list(session_id, client_id, pagination_tokens, params, auth_opts \\ [])
+  @spec handle_list(String.t() | nil, String.t(), map(), map()) :: {:ok, map()}
+  def handle_list(session_id, client_id, pagination_tokens, params)
 
-  def handle_list(session_id, client_id, _pagination_tokens, params, _auth_opts) do
+  def handle_list(session_id, client_id, _pagination_tokens, params) do
     Pagination.handle_paginated_list(
       session_id,
       client_id,
@@ -42,9 +42,9 @@ defmodule Aegis.MCP.Handlers.PromptsHandler do
   Executes a prompt with optional arguments and proper session management.
   Input validation is performed by InputValidationPlug before reaching this handler.
   """
-  @spec handle_get(String.t() | nil, String.t(), map(), map(), keyword()) ::
+  @spec handle_get(String.t() | nil, String.t(), map(), map()) ::
           {:ok, map()} | {:error, map()}
-  def handle_get(session_id, client_id, backend_sessions, params, auth_opts \\ [])
+  def handle_get(session_id, client_id, backend_sessions, params)
 
   def handle_get(
         session_id,
@@ -52,8 +52,7 @@ defmodule Aegis.MCP.Handlers.PromptsHandler do
         backend_sessions,
         %{
           "params" => %{"name" => namespaced_prompt_name} = prompt_params
-        },
-        _auth_opts
+        }
       ) do
     start_time = System.monotonic_time()
     arguments = Map.get(prompt_params, "arguments", %{})
@@ -88,7 +87,7 @@ defmodule Aegis.MCP.Handlers.PromptsHandler do
     result
   end
 
-  def handle_get(_session_id, _client_id, _backend_sessions, _params, _auth_opts) do
+  def handle_get(_session_id, _client_id, _backend_sessions, _params) do
     {:error,
      ErrorResponse.build_error(
        ErrorResponse.invalid_params(),
