@@ -42,6 +42,21 @@
             />
           </div>
 
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <.input
+              type="number"
+              name="client[page_size]"
+              label="Page Size"
+              placeholder="50"
+              value={if @editing_client, do: @editing_client.page_size, else: 50}
+              min="1"
+              max="500"
+            />
+            <div class="text-sm text-gray-600 flex items-end pb-2">
+              Number of items per page (1-500). Default: 50
+            </div>
+          </div>
+
           <div class="text-sm text-gray-600">
             Clients use API key authentication. An API key will be generated automatically.
           </div>

@@ -47,6 +47,8 @@ defmodule Aegis.Application do
       {Task.Supervisor, name: Aegis.TaskSupervisor},
       # Session lifecycle manager (single GenServer for all sessions)
       Aegis.MCP.SessionManager,
+      # Usage analytics for smart pagination
+      Aegis.MCP.Analytics,
       # Distributed rate limiter for MCP endpoints
       Aegis.MCP.DistributedRateLimiter,
       # Start cache system

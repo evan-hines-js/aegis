@@ -62,7 +62,7 @@
     },
     {
       "allow_nil?": true,
-      "default": "\"Bearer {API_KEY}\"",
+      "default": "\"{API_KEY}\"",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
@@ -71,45 +71,6 @@
       "size": null,
       "source": "api_key_template",
       "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_client_id",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_token_url",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "[]",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_scopes",
-      "type": [
-        "array",
-        "text"
-      ]
     },
     {
       "allow_nil?": true,
@@ -158,18 +119,6 @@
       "size": null,
       "source": "encrypted_api_key",
       "type": "binary"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "encrypted_oauth_client_secret",
-      "type": "binary"
     }
   ],
   "base_filter": null,
@@ -177,7 +126,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "68CA1BC6231D65BFD3F549C8ED667182F9ED040114A42FD97B5B2885F5BDE66C",
+  "hash": "A6E31A0471D56428FDB9B8D3596B516EDA6CE54BB035B2123741146F0E402517",
   "identities": [
     {
       "all_tenants?": false,

@@ -169,6 +169,13 @@ config :aegis, :rate_limits,
     {String.to_integer(System.get_env("MCP_SESSION_DELETION_LIMIT") || "100"), 60_000},
   fallback: {String.to_integer(System.get_env("MCP_FALLBACK_LIMIT") || "100"), 60_000}
 
+# Analytics and smart ranking configuration
+config :aegis, Aegis.MCP.Analytics,
+  # Enable usage analytics collection (default: true)
+  enabled: true,
+  # Cache TTL for ranking results in seconds (default: 300 = 5 minutes)
+  cache_ttl: 300
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails

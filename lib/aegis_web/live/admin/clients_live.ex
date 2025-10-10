@@ -77,7 +77,7 @@ defmodule AegisWeb.Admin.ClientsLive do
   end
 
   def handle_event("create_client", %{"client" => client_params} = params, socket) do
-    base_params = Map.take(client_params, ["name", "description"])
+    base_params = Map.take(client_params, ["name", "description", "page_size"])
 
     case Aegis.MCP.create_client(base_params) do
       {:ok, client} ->

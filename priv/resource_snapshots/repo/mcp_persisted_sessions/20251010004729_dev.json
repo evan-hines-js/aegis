@@ -2,7 +2,7 @@
   "attributes": [
     {
       "allow_nil?": false,
-      "default": "fragment(\"uuid_generate_v7()\")",
+      "default": "fragment(\"gen_random_uuid()\")",
       "generated?": false,
       "precision": null,
       "primary_key?": true,
@@ -21,19 +21,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "name",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "description",
+      "source": "session_id",
       "type": "text"
     },
     {
@@ -45,7 +33,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "api_key_hash",
+      "source": "client_id",
       "type": "text"
     },
     {
@@ -57,86 +45,8 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "api_key_lookup_hash",
-      "type": "text"
-    },
-    {
-      "allow_nil?": false,
-      "default": "true",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "active",
-      "type": "boolean"
-    },
-    {
-      "allow_nil?": false,
-      "default": "\"api_key\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "auth_type",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_client_id",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_issuer_url",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_grant_types",
-      "type": [
-        "array",
-        "text"
-      ]
-    },
-    {
-      "allow_nil?": true,
-      "default": "[]",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "oauth_scopes",
-      "type": [
-        "array",
-        "text"
-      ]
+      "source": "session_data",
+      "type": "map"
     },
     {
       "allow_nil?": false,
@@ -147,7 +57,19 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "created_at",
+      "source": "persisted_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": false,
+      "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "inserted_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -168,19 +90,19 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "23C5DBD148D9B737009FAB64CB5C764C4EE729B01D4846DBEAD2C8DCBD916E96",
+  "hash": "F43FD4DF6E2CEF14F4105C72A046FDF03B37ED1C446A6EF52FCC4976D0F5C08F",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "mcp_clients_unique_name_index",
+      "index_name": "mcp_persisted_sessions_unique_session_id_index",
       "keys": [
         {
           "type": "atom",
-          "value": "name"
+          "value": "session_id"
         }
       ],
-      "name": "unique_name",
+      "name": "unique_session_id",
       "nils_distinct?": true,
       "where": null
     }
@@ -192,5 +114,5 @@
   },
   "repo": "Elixir.Aegis.Repo",
   "schema": null,
-  "table": "mcp_clients"
+  "table": "mcp_persisted_sessions"
 }

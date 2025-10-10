@@ -1,4 +1,4 @@
-defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
+defmodule Aegis.Repo.Migrations.MigrateResources1 do
   @moduledoc """
   Updates resources based on their most recent snapshots.
 
@@ -38,9 +38,7 @@ defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
       add :endpoint, :text, null: false
       add :auth_type, :text, null: false, default: "none"
       add :api_key_header, :text, default: "Authorization"
-      add :oauth_client_id, :text
-      add :oauth_token_url, :text
-      add :oauth_scopes, {:array, :text}, default: []
+      add :api_key_template, :text, default: "{API_KEY}"
       add :capabilities, :map, default: %{}
 
       add :created_at, :utc_datetime_usec,
@@ -52,33 +50,9 @@ defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
         default: fragment("(now() AT TIME ZONE 'utc')")
 
       add :encrypted_api_key, :binary
-      add :encrypted_oauth_client_secret, :binary
     end
 
     create unique_index(:servers, [:name], name: "servers_unique_name_index")
-
-    create table(:oauth_tokens, primary_key: false) do
-      add :id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true
-      add :keycloak_client_id, :text, null: false
-      add :expires_in, :bigint
-      add :scopes, :text
-      add :state, :text
-      add :active, :boolean, null: false, default: true
-      add :refreshed_at, :utc_datetime_usec
-      add :revoked_at, :utc_datetime_usec
-
-      add :inserted_at, :utc_datetime_usec,
-        null: false,
-        default: fragment("(now() AT TIME ZONE 'utc')")
-
-      add :updated_at, :utc_datetime_usec,
-        null: false,
-        default: fragment("(now() AT TIME ZONE 'utc')")
-
-      add :client_id, :uuid, null: false
-      add :encrypted_access_token, :binary, null: false
-      add :encrypted_refresh_token, :binary
-    end
 
     create table(:mcp_persisted_sessions, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("gen_random_uuid()"), primary_key: true
@@ -128,35 +102,12 @@ defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
 
     create table(:mcp_clients, primary_key: false) do
       add :id, :uuid, null: false, default: fragment("uuid_generate_v7()"), primary_key: true
-    end
-
-    alter table(:oauth_tokens) do
-      modify :client_id,
-             references(:mcp_clients,
-               column: :id,
-               name: "oauth_tokens_client_id_fkey",
-               type: :uuid,
-               prefix: "public"
-             )
-    end
-
-    create unique_index(:oauth_tokens, [:client_id, :keycloak_client_id],
-             name: "oauth_tokens_unique_client_keycloak_index",
-             nulls_distinct: false
-           )
-
-    alter table(:mcp_clients) do
       add :name, :text, null: false
       add :description, :text
       add :api_key_hash, :text, null: false
       add :api_key_lookup_hash, :text, null: false
       add :active, :boolean, null: false, default: true
-      add :allowed_origins, {:array, :text}, default: []
-      add :auth_type, :text, null: false, default: "api_key"
-      add :oauth_client_id, :text
-      add :oauth_issuer_url, :text
-      add :oauth_grant_types, {:array, :text}
-      add :oauth_scopes, {:array, :text}, default: []
+      add :page_size, :bigint, null: false, default: 50
 
       add :created_at, :utc_datetime_usec,
         null: false,
@@ -217,32 +168,6 @@ defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
 
     drop_if_exists unique_index(:mcp_clients, [:name], name: "mcp_clients_unique_name_index")
 
-    alter table(:mcp_clients) do
-      remove :updated_at
-      remove :created_at
-      remove :oauth_scopes
-      remove :oauth_grant_types
-      remove :oauth_issuer_url
-      remove :oauth_client_id
-      remove :auth_type
-      remove :allowed_origins
-      remove :active
-      remove :api_key_lookup_hash
-      remove :api_key_hash
-      remove :description
-      remove :name
-    end
-
-    drop_if_exists unique_index(:oauth_tokens, [:client_id, :keycloak_client_id],
-                     name: "oauth_tokens_unique_client_keycloak_index"
-                   )
-
-    drop constraint(:oauth_tokens, "oauth_tokens_client_id_fkey")
-
-    alter table(:oauth_tokens) do
-      modify :client_id, :uuid
-    end
-
     drop table(:mcp_clients)
 
     drop_if_exists unique_index(
@@ -258,8 +183,6 @@ defmodule Aegis.Repo.Migrations.AddApiKeyHeaderToServers do
                    )
 
     drop table(:mcp_persisted_sessions)
-
-    drop table(:oauth_tokens)
 
     drop_if_exists unique_index(:servers, [:name], name: "servers_unique_name_index")
 

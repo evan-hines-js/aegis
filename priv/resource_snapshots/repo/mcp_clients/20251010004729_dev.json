@@ -25,6 +25,18 @@
       "type": "text"
     },
     {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "description",
+      "type": "text"
+    },
+    {
       "allow_nil?": false,
       "default": "nil",
       "generated?": false,
@@ -33,47 +45,11 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "endpoint",
+      "source": "api_key_hash",
       "type": "text"
     },
     {
       "allow_nil?": false,
-      "default": "\"none\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "auth_type",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"Authorization\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "api_key_header",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "\"{API_KEY}\"",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "api_key_template",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -81,47 +57,32 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "oauth_client_id",
+      "source": "api_key_lookup_hash",
       "type": "text"
     },
     {
-      "allow_nil?": true,
-      "default": "nil",
+      "allow_nil?": false,
+      "default": "true",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "oauth_token_url",
-      "type": "text"
+      "source": "active",
+      "type": "boolean"
     },
     {
-      "allow_nil?": true,
-      "default": "[]",
+      "allow_nil?": false,
+      "default": "50",
       "generated?": false,
       "precision": null,
       "primary_key?": false,
       "references": null,
       "scale": null,
       "size": null,
-      "source": "oauth_scopes",
-      "type": [
-        "array",
-        "text"
-      ]
-    },
-    {
-      "allow_nil?": true,
-      "default": "%{}",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "capabilities",
-      "type": "map"
+      "source": "page_size",
+      "type": "bigint"
     },
     {
       "allow_nil?": false,
@@ -146,30 +107,6 @@
       "size": null,
       "source": "updated_at",
       "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "encrypted_api_key",
-      "type": "binary"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "encrypted_oauth_client_secret",
-      "type": "binary"
     }
   ],
   "base_filter": null,
@@ -177,12 +114,12 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "8E2BFACE163F0392C1C234730667790BA66F33DE8AD0541F8C04B70246DFAC7E",
+  "hash": "7CC131BEDE14F5C21E3C7B9847674DE979E9D0E7AC9BF6366A54E6841AA9AFD4",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "servers_unique_name_index",
+      "index_name": "mcp_clients_unique_name_index",
       "keys": [
         {
           "type": "atom",
@@ -201,5 +138,5 @@
   },
   "repo": "Elixir.Aegis.Repo",
   "schema": null,
-  "table": "servers"
+  "table": "mcp_clients"
 }

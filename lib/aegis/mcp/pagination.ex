@@ -12,6 +12,7 @@ defmodule Aegis.MCP.Pagination do
     Authorization,
     ErrorResponse,
     Namespace,
+    Ranking,
     RequestHelpers,
     ServerClient,
     Session
@@ -247,7 +248,7 @@ defmodule Aegis.MCP.Pagination do
     permissions = get_permissions_for_filtering(client_id)
     accessible_servers = get_accessible_servers_for_type(permissions, resource_type)
 
-    # Single-pass: extract → namespace → filter by server → filter by permission
+    # Single-pass: extract → namespace → filter by server → filter by permission → rank
     items =
       server_responses
       |> Stream.flat_map(fn
@@ -267,6 +268,7 @@ defmodule Aegis.MCP.Pagination do
         &item_passes_permission_filter?(&1, permissions, resource_type, name_extractor)
       )
       |> Stream.map(&Map.delete(&1, :server_name))
+      |> Ranking.sort_by_usage(client_id)
       |> Enum.to_list()
 
     duration = System.monotonic_time() - start_time
@@ -357,34 +359,104 @@ defmodule Aegis.MCP.Pagination do
     {items, responses} =
       extract_and_filter_items(server_responses, method, client_id, item_filter_fn)
 
-    handle_pagination_response(session_id, method, items, responses, params)
+    # Get client's page size setting
+    page_size = get_client_page_size(client_id)
+
+    handle_pagination_response_with_slicing(
+      session_id,
+      client_id,
+      method,
+      items,
+      responses,
+      params,
+      page_size
+    )
   end
 
   defp handle_continued_request(session_id, cursor, params, method, item_filter_fn) do
-    with {:ok, %{method: ^method, backend_states: backend_states}} <-
+    with {:ok,
+          %{
+            method: ^method,
+            backend_states: backend_states,
+            item_buffer: item_buffer,
+            page_size: page_size
+          }} <-
            get_pagination_state(session_id, cursor),
          {:ok, client_id} <- get_client_from_session(session_id) do
-      accessible_servers = Authorization.get_accessible_servers(client_id)
-      server_responses = fetch_next_pages(accessible_servers, method, backend_states)
+      # Check if we have buffered items to serve
+      if length(item_buffer) >= page_size do
+        # Serve from buffer without fetching from backends
+        {current_page, remaining_buffer} = Enum.split(item_buffer, page_size)
 
-      {items, responses} =
-        extract_and_filter_items(server_responses, method, client_id, item_filter_fn)
+        has_more = length(remaining_buffer) > 0 || has_remaining_results?(backend_states)
 
-      case update_pagination_state(session_id, cursor, responses) do
-        {:ok, new_cursor} ->
+        if has_more do
+          new_cursor = generate_hub_cursor(session_id, method)
+
+          token_data = %{
+            method: method,
+            backend_states: backend_states,
+            item_buffer: remaining_buffer,
+            page_size: page_size,
+            created_at: DateTime.utc_now(),
+            last_accessed: DateTime.utc_now()
+          }
+
+          Session.store_pagination_token(session_id, new_cursor, token_data)
+          Session.remove_pagination_token(session_id, cursor)
+
           result_key = get_result_key(method)
-          result = %{result_key => items}
-          result = if new_cursor, do: Map.put(result, "nextCursor", new_cursor), else: result
+          result = %{result_key => current_page, "nextCursor" => new_cursor}
           response = %{jsonrpc: "2.0", result: result}
           {:ok, RequestHelpers.add_request_id_if_present(response, params)}
+        else
+          Session.remove_pagination_token(session_id, cursor)
+          result_key = get_result_key(method)
+          result = %{result_key => current_page}
+          response = %{jsonrpc: "2.0", result: result}
+          {:ok, RequestHelpers.add_request_id_if_present(response, params)}
+        end
+      else
+        # Need to fetch more from backends
+        accessible_servers = Authorization.get_accessible_servers(client_id)
+        server_responses = fetch_next_pages(accessible_servers, method, backend_states)
 
-        {:error, reason} ->
-          Logger.error("Pagination error during tools/list: #{inspect(reason)}")
+        {new_items, responses} =
+          extract_and_filter_items(server_responses, method, client_id, item_filter_fn)
 
-          ErrorResponse.build_error(
-            ErrorResponse.internal_error(),
-            "Pagination error: #{inspect(reason)}"
-          )
+        # Combine buffered items with new items
+        all_items = item_buffer ++ new_items
+        {current_page, remaining_buffer} = Enum.split(all_items, page_size)
+
+        updated_backend_states = extract_backend_states(responses)
+        has_more = length(remaining_buffer) > 0 || has_remaining_results?(updated_backend_states)
+
+        if has_more do
+          new_cursor = generate_hub_cursor(session_id, method)
+
+          token_data = %{
+            method: method,
+            backend_states: updated_backend_states,
+            item_buffer: remaining_buffer,
+            page_size: page_size,
+            created_at: DateTime.utc_now(),
+            last_accessed: DateTime.utc_now()
+          }
+
+          Session.store_pagination_token(session_id, new_cursor, token_data)
+          Session.remove_pagination_token(session_id, cursor)
+
+          result_key = get_result_key(method)
+          result = %{result_key => current_page, "nextCursor" => new_cursor}
+          response = %{jsonrpc: "2.0", result: result}
+          {:ok, RequestHelpers.add_request_id_if_present(response, params)}
+        else
+          Session.remove_pagination_token(session_id, cursor)
+          result_key = get_result_key(method)
+          result = %{result_key => current_page}
+          response = %{jsonrpc: "2.0", result: result}
+          {:ok, RequestHelpers.add_request_id_if_present(response, params)}
+        end
       end
     else
       {:ok, %{method: other_method}} ->
@@ -494,32 +566,6 @@ defmodule Aegis.MCP.Pagination do
     end
   end
 
-  defp update_pagination_state(session_id, current_hub_cursor, server_responses) do
-    with {:ok, token_data} <- Session.get_pagination_token(session_id, current_hub_cursor),
-         updated_states <- extract_backend_states(server_responses) do
-      Session.remove_pagination_token(session_id, current_hub_cursor)
-
-      if has_remaining_results?(updated_states) do
-        new_hub_cursor = generate_hub_cursor(session_id, token_data.method)
-
-        updated_token_data = %{
-          token_data
-          | backend_states: updated_states,
-            last_accessed: DateTime.utc_now()
-        }
-
-        case Session.store_pagination_token(session_id, new_hub_cursor, updated_token_data) do
-          :ok -> {:ok, new_hub_cursor}
-          {:error, reason} -> {:error, reason}
-        end
-      else
-        {:ok, nil}
-      end
-    else
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
   defp extract_backend_states(server_responses) do
     server_responses
     |> Enum.reduce(%{}, fn {server_name, response}, acc ->
@@ -561,5 +607,61 @@ defmodule Aegis.MCP.Pagination do
     :crypto.hash(:sha256, data)
     |> Base.url_encode64(padding: false)
     |> String.slice(0, 32)
+  end
+
+  # Hub-level pagination with ranking
+
+  defp get_client_page_size(client_id) do
+    case Aegis.MCP.Client.get_by_id(client_id) do
+      {:ok, client} -> Map.get(client, :page_size, 50)
+      {:error, _} -> 50
+    end
+  end
+
+  defp handle_pagination_response_with_slicing(
+         session_id,
+         _client_id,
+         method,
+         items,
+         server_responses,
+         params,
+         page_size
+       ) do
+    result_key = get_result_key(method)
+
+    if Enum.empty?(server_responses) do
+      build_pagination_response(result_key, [], nil, params)
+    else
+      # Slice items into current page and buffer
+      {current_page, remaining_items} = Enum.split(items, page_size)
+
+      backend_states = extract_backend_states(server_responses)
+      has_more = length(remaining_items) > 0 || has_remaining_results?(backend_states)
+
+      if has_more do
+        hub_cursor = generate_hub_cursor(session_id, method)
+
+        token_data = %{
+          method: method,
+          backend_states: backend_states,
+          item_buffer: remaining_items,
+          page_size: page_size,
+          created_at: DateTime.utc_now(),
+          last_accessed: DateTime.utc_now()
+        }
+
+        case Session.store_pagination_token(session_id, hub_cursor, token_data) do
+          :ok ->
+            build_pagination_response(result_key, current_page, hub_cursor, params)
+
+          {:error, reason} ->
+            Logger.warning("Failed to store pagination state: #{inspect(reason)}")
+            build_pagination_response(result_key, current_page, nil, params)
+        end
+      else
+        # No more results, return current page without cursor
+        build_pagination_response(result_key, current_page, nil, params)
+      end
+    end
   end
 end

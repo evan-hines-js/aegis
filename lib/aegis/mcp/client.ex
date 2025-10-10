@@ -41,7 +41,8 @@ defmodule Aegis.MCP.Client do
       accept [
         :name,
         :description,
-        :active
+        :active,
+        :page_size
       ]
 
       change after_transaction(fn _changeset, result, _context ->
@@ -237,6 +238,15 @@ defmodule Aegis.MCP.Client do
       public? true
       default true
       description "Whether the client is active and can authenticate"
+    end
+
+    attribute :page_size, :integer do
+      allow_nil? false
+      public? true
+      default 50
+      description "Number of items to return per page for this client (default: 50)"
+
+      constraints min: 1, max: 500
     end
 
     create_timestamp :created_at
