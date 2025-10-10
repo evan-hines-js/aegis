@@ -3,7 +3,6 @@ export TOKEN_SIGNING_SECRET=zm3QHvRqAAtwEnrICRW4vv8Jm/MVf0ebWxYbzuo1qlOcnCStvIi4
 export DATABASE_URL=ecto://postgres:postgres@localhost:5432/aegis_dev
  export ENCRYPTION_KEY=TVDTWhPqVXPQTcJX4f0+Dut5+0rdABzC
  export PHX_HOST=localhost
-export ALLOWED_ORIGINS=http://localhost:4000,https://localhost:4000,http://127.0.0.1:4000,https://127.0.0.1:4000
 
 # Rate limiting configuration for load testing
 export MCP_TOOL_CALLS_LIMIT=999999

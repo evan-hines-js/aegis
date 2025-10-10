@@ -109,21 +109,14 @@ defmodule Aegis.MCP.SSEFormatter do
   @doc """
   Set SSE response headers on a Plug connection.
   """
-  @spec set_sse_headers(Plug.Conn.t(), String.t() | nil) :: Plug.Conn.t()
-  def set_sse_headers(conn, origin \\ nil) do
+  @spec set_sse_headers(Plug.Conn.t()) :: Plug.Conn.t()
+  def set_sse_headers(conn) do
     import Plug.Conn
-
-    origin_header = origin || "*"
 
     conn
     |> put_resp_header("content-type", Constants.sse_content_type())
     |> put_resp_header("cache-control", Constants.sse_cache_control())
     |> put_resp_header("connection", Constants.sse_connection_type())
-    |> put_resp_header("access-control-allow-origin", origin_header)
-    |> put_resp_header(
-      "access-control-allow-headers",
-      "Cache-Control, #{Constants.session_id_header()}, #{Constants.protocol_version_header()}"
-    )
   end
 
   @doc """
