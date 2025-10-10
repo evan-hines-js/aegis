@@ -135,43 +135,6 @@ defmodule Aegis.MCP.HeaderValidation do
   end
 
   @doc """
-  Validate Origin header for CORS compliance.
-
-  Allows localhost, 127.0.0.1, and HTTPS origins. In production,
-  this should be configured with a proper whitelist.
-  """
-  @spec validate_origin_header(Plug.Conn.t()) :: validation_result()
-  def validate_origin_header(conn) do
-    case Plug.Conn.get_req_header(conn, "origin") do
-      # Allow no origin for non-browser clients
-      [] ->
-        {:ok, :no_origin}
-
-      [origin] ->
-        cond do
-          String.starts_with?(origin, "http://localhost") -> {:ok, :valid}
-          String.starts_with?(origin, "http://127.0.0.1") -> {:ok, :valid}
-          String.starts_with?(origin, "https://") -> {:ok, :valid}
-          true -> {:error, :invalid_origin}
-        end
-
-      _multiple ->
-        {:error, :invalid_origin}
-    end
-  end
-
-  @doc """
-  Get the Origin header value for CORS response headers.
-  """
-  @spec get_origin_header(Plug.Conn.t()) :: String.t()
-  def get_origin_header(conn) do
-    case Plug.Conn.get_req_header(conn, "origin") do
-      [origin] -> origin
-      _ -> "*"
-    end
-  end
-
-  @doc """
   Validate session ID header and check session validity.
 
   For initialize method, creates a new session. For other methods,

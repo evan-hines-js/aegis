@@ -5,7 +5,6 @@ Model Context Protocol hub implementation.
 ## Features
 
 - MCP server-side protocol implementation
-- OAuth 2.0/OIDC authentication
 - API key management
 - Resource-level access control
 - Multi-node clustering support

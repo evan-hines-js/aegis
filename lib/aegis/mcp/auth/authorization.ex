@@ -40,9 +40,6 @@ defmodule Aegis.MCP.Authorization do
 
   @doc """
   Check if a client can call a specific tool.
-
-  Options:
-  - `:jwt_claims` - JWT claims for OAuth scope validation
   """
   @spec can_call_tool?(String.t(), String.t(), String.t(), keyword()) :: authorization_result()
   def can_call_tool?(client_id, server_name, tool_name, opts \\ []) do
@@ -52,39 +49,7 @@ defmodule Aegis.MCP.Authorization do
   @doc """
   Check client permission before allowing Hub to access backend on their behalf.
 
-  This is the OAuth-compliant solution to Confused Deputy attacks:
-  1. Hub validates client permission BEFORE using its own credentials
-  2. Hub uses standard OAuth Client Credentials with backend
-  3. Backend receives standard OAuth token (no changes required)
-
-  This follows RFC 6749 by ensuring the Hub (authorization server intermediary)
-  validates permissions before accessing resources on behalf of clients.
-
-  ## SECURITY CRITICAL: Token Passthrough Prevention
-
-  When the Hub makes requests to upstream MCP servers on behalf of a client:
-
-  **FORBIDDEN (Token Passthrough):**
-  ```
-  Client --[token A]--> Hub --[token A]--> Upstream Server
-  ```
-  This is a security violation. Token A was issued for the Hub, not the upstream server.
-
-  **REQUIRED (Separate Tokens):**
-  ```
-  Client --[token A]--> Hub
-  Hub validates token A audience = Hub
-  Hub checks client permissions
-  Hub --[token B]--> Upstream Server
-  ```
-  Token B is obtained via OAuth client credentials flow with upstream server as audience.
-
-  See RFC 8707 and MCP Security Best Practices for details.
-
-  ## OAuth Scope Validation
-
-  When called with JWT claims (OAuth authentication), this function also validates
-  that the token contains the required OAuth scopes for the operation.
+  This ensures the Hub validates permissions before accessing resources on behalf of clients.
   """
   @spec check_permission(String.t(), atom(), String.t(), String.t(), atom(), keyword()) ::
           authorization_result()
@@ -96,11 +61,7 @@ defmodule Aegis.MCP.Authorization do
         action,
         opts \\ []
       ) do
-    jwt_claims = Keyword.get(opts, :jwt_claims)
-
-    # OAuth-compliant authorization check at the Hub level
     with {:ok, _client} <- validate_client(client_id),
-         :ok <- validate_oauth_scopes(jwt_claims, resource_type, action),
          {:ok, permissions} <- get_client_permissions(client_id),
          true <-
            has_matching_permission?(
@@ -126,9 +87,6 @@ defmodule Aegis.MCP.Authorization do
 
   @doc """
   Check if a client can read a specific resource.
-
-  Options:
-  - `:jwt_claims` - JWT claims for OAuth scope validation
   """
   @spec can_read_resource?(String.t(), String.t(), String.t(), keyword()) ::
           authorization_result()
@@ -138,9 +96,6 @@ defmodule Aegis.MCP.Authorization do
 
   @doc """
   Check if a client can get a specific prompt.
-
-  Options:
-  - `:jwt_claims` - JWT claims for OAuth scope validation
   """
   @spec can_get_prompt?(String.t(), String.t(), String.t(), keyword()) :: authorization_result()
   def can_get_prompt?(client_id, server_name, prompt_name, opts \\ []) do
@@ -451,12 +406,6 @@ defmodule Aegis.MCP.Authorization do
         action
       )
     end)
-  end
-
-  # Validate OAuth scopes if JWT claims are present
-  # OAuth removed - API key authentication only
-  defp validate_oauth_scopes(_jwt_claims, _resource_type, _action) do
-    :ok
   end
 
   @doc """

@@ -55,7 +55,7 @@ defmodule Aegis.MCP.ServerClient do
     end
   end
 
-  @doc "Call a tool on a specific server with client context for OAuth Token Exchange"
+  @doc "Call a tool on a specific server with client context"
   def call_tool_with_context(server, client_id, backend_session_id, tool_params) do
     start_time = System.monotonic_time()
     tool_name = Map.get(tool_params, "name")
@@ -68,7 +68,7 @@ defmodule Aegis.MCP.ServerClient do
       params: tool_params
     }
 
-    # Build headers with OAuth Token Exchange for client context
+    # Build headers with client context
     session_headers =
       if backend_session_id, do: [{"mcp-session-id", backend_session_id}], else: []
 
@@ -353,10 +353,10 @@ defmodule Aegis.MCP.ServerClient do
   Build authentication headers for server requests.
 
   ## Options
-  - `:client_id` - Client ID for OAuth Token Exchange (required for OAuth servers)
-  - `:resource_type` - Resource type for OAuth Token Exchange
-  - `:resource_pattern` - Resource pattern for OAuth Token Exchange
-  - `:action` - Action for OAuth Token Exchange
+  - `:client_id` - Client ID for request context
+  - `:resource_type` - Resource type for request context
+  - `:resource_pattern` - Resource pattern for request context
+  - `:action` - Action for request context
   """
   def build_auth_headers(server, opts \\ []) do
     auth_type = Map.get(server, :auth_type, :none)

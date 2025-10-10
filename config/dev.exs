@@ -67,18 +67,6 @@ config :aegis, AegisWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :aegis, dev_routes: true, token_signing_secret: "RlIEMqMcVOUSETKETVILUTgnY7dgwU9L"
 
-# DEVELOPMENT: Permissive CORS for OAuth metadata endpoints to support MCP Inspect and other dev tools
-config :aegis, AegisWeb.OAuthMetadataController, allowed_origins: ["*"]
-
-# Per-client CORS configuration is now stored in the database!
-# Use the admin UI to configure allowed_origins for each client.
-# Example: Create a client with allowed_origins: ["http://localhost:6274"]
-
-# DEVELOPMENT: Override authorization servers to use our Phoenix app as OAuth proxy
-# This ensures clients discover our proxy endpoints instead of going directly to Keycloak
-config :aegis, Aegis.MCP.OAuth.ProtectedResourceMetadata,
-  authorization_servers: ["http://localhost:4000/oauth"]
-
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 config :logger, level: :debug
@@ -108,13 +96,6 @@ config :aegis, :smart_pagination,
   analytics_retention_days: 7,
   # More aggressive recency decay for testing
   recency_decay_hours: 0.5
-
-# Keycloak OAuth configuration
-config :aegis,
-  keycloak_base_url: "http://localhost:8080",
-  keycloak_realm: "aegis-mcp",
-  # Skip audience validation in dev/test (INSECURE - dev only!)
-  oauth_skip_audience_validation: true
 
 # libcluster configuration for distributed testing
 # Uses Gossip strategy with multicast for local node discovery

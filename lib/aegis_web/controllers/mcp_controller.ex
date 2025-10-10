@@ -24,20 +24,16 @@ defmodule AegisWeb.MCPController do
   plug AegisWeb.RateLimitPlug when action in [:index, :info, :sse_stream, :delete]
 
   @doc """
-  Handle CORS preflight OPTIONS requests for MCP endpoints.
+  Handle OPTIONS requests for MCP endpoints.
   """
   def options(conn, _params) do
-    conn
-    |> AegisWeb.CORS.add_mcp_headers()
-    |> AegisWeb.CORS.add_preflight_headers()
-    |> send_resp(200, "")
+    send_resp(conn, 200, "")
   end
 
   def info(conn, _params) do
     server_info = Constants.server_info()
 
     conn
-    |> AegisWeb.CORS.add_mcp_headers()
     |> put_resp_content_type(Constants.json_content_type())
     |> json(%{
       name: server_info.name,
@@ -229,7 +225,7 @@ defmodule AegisWeb.MCPController do
 
   # Private helper functions
 
-  # Extract client_id from conn assigns (set by OAuthAuthenticationPlug)
+  # Extract client_id from conn assigns
   defp extract_client_id(conn) do
     case Map.get(conn.assigns, :current_client) do
       %{id: client_id} when is_binary(client_id) ->
@@ -267,7 +263,7 @@ defmodule AegisWeb.MCPController do
   end
 
   # Sets up standard SSE headers for server-sent events streaming
-  # Configures no-cache headers, CORS headers, and session identification
+  # Configures no-cache headers and session identification
   @spec setup_sse_stream(Plug.Conn.t(), String.t() | nil, String.t()) :: Plug.Conn.t()
   defp setup_sse_stream(conn, session_id, content_type \\ "text/event-stream") do
     conn =
@@ -275,11 +271,6 @@ defmodule AegisWeb.MCPController do
       |> put_resp_content_type(content_type)
       |> put_resp_header("cache-control", "no-cache")
       |> put_resp_header("connection", "keep-alive")
-      |> put_resp_header("access-control-allow-origin", "*")
-      |> put_resp_header(
-        "access-control-allow-headers",
-        "Cache-Control, Content-Type, Authorization, mcp-session-id, mcp-protocol-version"
-      )
 
     # Only add mcp-session-id header if we have a session
     if session_id && is_binary(session_id) do
@@ -293,12 +284,7 @@ defmodule AegisWeb.MCPController do
   @spec setup_sse_stream_with_resume(Plug.Conn.t(), String.t() | nil, String.t()) ::
           Plug.Conn.t()
   defp setup_sse_stream_with_resume(conn, session_id, content_type \\ "text/event-stream") do
-    conn
-    |> setup_sse_stream(session_id, content_type)
-    |> put_resp_header(
-      "access-control-allow-headers",
-      "Cache-Control, Content-Type, Authorization, mcp-session-id, mcp-protocol-version, Last-Event-ID"
-    )
+    setup_sse_stream(conn, session_id, content_type)
   end
 
   # Centralized validation error handler using ErrorHandler for consistency.
@@ -309,7 +295,6 @@ defmodule AegisWeb.MCPController do
     case error do
       {:error, response} when is_map(response) ->
         conn
-        |> AegisWeb.CORS.add_mcp_headers()
         |> put_status(:bad_request)
         |> json(response)
 
@@ -333,7 +318,6 @@ defmodule AegisWeb.MCPController do
 
   defp send_error_response(conn, status, message) do
     conn
-    |> AegisWeb.CORS.add_mcp_headers()
     |> put_status(status)
     |> json(%{
       jsonrpc: "2.0",
@@ -406,7 +390,6 @@ defmodule AegisWeb.MCPController do
         case extract_client_id(conn) do
           {:ok, client_id} ->
             # Call handler directly with nil session_id and empty backend_sessions
-            # Pass conn for OAuth context
             RequestRouter.route_to_handler(nil, client_id, %{}, method, params, conn)
 
           {:error, reason} ->
@@ -414,7 +397,7 @@ defmodule AegisWeb.MCPController do
         end
 
       session_id when is_binary(session_id) ->
-        # Stateful mode - pass conn for OAuth context
+        # Stateful mode
         RequestRouter.route_request(session_id, method, params, conn)
     end
   end
@@ -488,7 +471,6 @@ defmodule AegisWeb.MCPController do
         # The error is indicated in the response body's error field
         # Only use HTTP error codes for transport-level failures (auth, malformed JSON, etc)
         conn
-        |> AegisWeb.CORS.add_mcp_headers()
         |> put_status(:ok)
         |> json(unwrapped_error)
     end
@@ -522,9 +504,7 @@ defmodule AegisWeb.MCPController do
 
       _ ->
         # Single JSON-RPC request -> JSON response
-        conn
-        |> AegisWeb.CORS.add_mcp_headers()
-        |> json(clean_response)
+        json(conn, clean_response)
     end
   end
 
@@ -594,7 +574,6 @@ defmodule AegisWeb.MCPController do
 
   defp send_jsonrpc_error(conn, status, code, message) do
     conn
-    |> AegisWeb.CORS.add_mcp_headers()
     |> put_status(status)
     |> json(%{
       jsonrpc: "2.0",
@@ -605,7 +584,6 @@ defmodule AegisWeb.MCPController do
     })
   end
 
-  # CORS handling moved to AegisWeb.CORS module
   # SSE helpers have been moved to AegisWeb.MCP.SSEHandler
   # for better separation of concerns and maintainability
 end

@@ -24,20 +24,9 @@ import Config
 #
 # Optional - Security:
 #   API_KEY_SECRET        - Separate secret for API key hashing (defaults to TOKEN_SIGNING_SECRET)
-#   ALLOWED_ORIGINS       - Comma-separated CORS origins (e.g., "https://app1.com,https://app2.com")
 #
 # Optional - Clustering:
 #   DNS_CLUSTER_QUERY     - DNS query for cluster discovery (e.g., "aegis.example.com")
-#
-# Optional - OAuth 2.0:
-#   KEYCLOAK_ISSUER       - OAuth issuer URL (e.g., "https://auth.example.com/realms/mcp")
-#   KEYCLOAK_AUDIENCE     - OAuth audience (default: "aegis-mcp-hub")
-#   KEYCLOAK_JWKS_URL     - JWKS endpoint (defaults to issuer + /protocol/openid-connect/certs)
-#   KEYCLOAK_BASE_URL     - Keycloak base URL (default: "http://localhost:8080")
-#   KEYCLOAK_REALM        - Keycloak realm name (default: "aegis-mcp")
-#   OAUTH_REALM           - WWW-Authenticate realm (default: "Aegis MCP Server")
-#   OAUTH_RESOURCE_DOCUMENTATION - URL to OAuth documentation
-#   OAUTH_SCOPES_SUPPORTED - Comma-separated list of OAuth scopes (default: "openid,profile,email,offline_access")
 #
 # Optional - Smart Pagination/Sorting:
 #   SMART_SORTING_ENABLED              - Enable smart sorting (true/false)
@@ -93,15 +82,6 @@ if config_env() == :prod do
 
   config :aegis, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  # Configure allowed origins for CORS protection
-  allowed_origins =
-    if origin_list = System.get_env("ALLOWED_ORIGINS") do
-      String.split(origin_list, ",")
-    else
-      # Default to the configured host
-      ["https://#{host}"]
-    end
-
   config :aegis, AegisWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -117,46 +97,17 @@ if config_env() == :prod do
       num_acceptors: 100,
       num_connections: 16384
     ],
-    check_origin: allowed_origins,
+    check_origin: false,
     secret_key_base: secret_key_base
-
-  # Parse OAuth scopes from environment variable (comma-separated) or use defaults
-  oauth_scopes_supported =
-    case System.get_env("OAUTH_SCOPES_SUPPORTED") do
-      nil -> ["openid", "profile", "email", "offline_access"]
-      scopes_str -> String.split(scopes_str, ",", trim: true)
-    end
 
   config :aegis,
     token_signing_secret:
       System.get_env("TOKEN_SIGNING_SECRET") ||
-        raise("Missing environment variable `TOKEN_SIGNING_SECRET`!"),
-    keycloak_base_url: System.get_env("KEYCLOAK_BASE_URL") || "http://localhost:8080",
-    keycloak_realm: System.get_env("KEYCLOAK_REALM") || "aegis-mcp",
-    oauth_scopes_supported: oauth_scopes_supported
+        raise("Missing environment variable `TOKEN_SIGNING_SECRET`!")
 
   # API key hashing secret (separate from other secrets for better security)
   config :aegis,
     api_key_secret: System.get_env("API_KEY_SECRET") || System.get_env("TOKEN_SIGNING_SECRET")
-
-  # OAuth/Keycloak configuration
-  if keycloak_issuer = System.get_env("KEYCLOAK_ISSUER") do
-    config :aegis, Aegis.MCP.JWTValidator,
-      issuer: keycloak_issuer,
-      audience: System.get_env("KEYCLOAK_AUDIENCE") || "aegis-mcp-hub",
-      jwks_url:
-        System.get_env("KEYCLOAK_JWKS_URL") || "#{keycloak_issuer}/protocol/openid-connect/certs"
-
-    config :aegis, Aegis.MCP.OAuth.ProtectedResourceMetadata,
-      authorization_servers: [keycloak_issuer],
-      resource_documentation: System.get_env("OAUTH_RESOURCE_DOCUMENTATION")
-
-    config :aegis, Aegis.MCP.OAuth.WWWAuthenticate,
-      realm: System.get_env("OAUTH_REALM") || "Aegis MCP Server"
-
-    # SECURITY: OAuth metadata CORS configuration uses the same secure origins as the main endpoint
-    config :aegis, AegisWeb.OAuthMetadataController, allowed_origins: allowed_origins
-  end
 
   # Cloak encryption configuration for production
   encryption_key = System.get_env("ENCRYPTION_KEY")

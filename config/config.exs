@@ -23,21 +23,6 @@ config :mime,
     "text/event-stream" => ["event-stream"]
   }
 
-# JWT validation configuration for OIDC providers
-config :aegis, Aegis.MCP.JWTValidator,
-  issuer: "http://localhost:8080/realms/aegis-mcp",
-  audience: "aegis-mcp-hub",
-  # JWKS endpoint - configurable for any OIDC provider
-  jwks_url: "http://localhost:8080/realms/aegis-mcp/protocol/openid-connect/certs"
-
-# OAuth 2.0 Protected Resource Metadata configuration (RFC 9728)
-config :aegis, Aegis.MCP.OAuth.ProtectedResourceMetadata,
-  authorization_servers: ["http://localhost:8080/realms/aegis-mcp"],
-  resource_documentation: "https://docs.aegis-mcp.example.com/oauth"
-
-# WWW-Authenticate header configuration
-config :aegis, Aegis.MCP.OAuth.WWWAuthenticate, realm: "Aegis MCP Server"
-
 config :ash_json_api,
   show_public_calculations_when_loaded?: false,
   authorize_update_destroy_with_error?: true

@@ -41,12 +41,6 @@ services:
       # Configure trusted hosts for client registration
       KC_SPI_CLIENT_REGISTRATION_POLICY_TRUSTED_HOST_TRUSTED_HOSTS: "localhost,127.0.0.1,localhost:6274,localhost:4000"
       KC_SPI_CLIENT_REGISTRATION_POLICY_TRUSTED_HOST_HOST_SENDING_REGISTRATION_REQUEST_MUST_MATCH: "false"
-      # CORS configuration
-      KC_SPI_CORS_DEFAULT_CORS_ALLOWED_ORIGINS: "http://localhost:6274,http://localhost:6277,http://localhost:4000,http://127.0.0.1:6274,http://127.0.0.1:4000"
-      KC_SPI_CORS_DEFAULT_CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
-      KC_SPI_CORS_DEFAULT_CORS_ALLOWED_HEADERS: "Content-Type,Authorization,Accept,Origin"
-      KC_SPI_CORS_DEFAULT_CORS_EXPOSED_HEADERS: "*"
-      KC_SPI_CORS_DEFAULT_CORS_MAX_AGE: "3600"
     ports:
       - "8080:8080"
     depends_on:
@@ -68,8 +62,7 @@ services:
   #     PHX_HOST: localhost
   #     PORT: 4000
   #     ENCRYPTION_KEY: TVDTWhPqVXPQTcJX4f0+Dut5+0rdABzC
-  #     ALLOWED_ORIGINS: http://localhost:4000,https://localhost:4000,http://127.0.0.1:4000,https://127.0.0.1:4000
-
+  #
   #     # Rate limiting configuration for load testing
   #     MCP_TOOL_CALLS_LIMIT: 999999
   #     MCP_LIST_OPERATIONS_LIMIT: 999999
@@ -78,10 +71,6 @@ services:
   #     MCP_SERVER_INFO_LIMIT: 999999
   #     MCP_SSE_STREAMS_LIMIT: 999999
   #     MCP_SESSION_DELETION_LIMIT: 999999
-  #     # OAuth/Keycloak configuration
-  #     KEYCLOAK_ISSUER: "http://keycloak:8080/realms/aegis-mcp"
-  #     KEYCLOAK_AUDIENCE: "aegis-mcp-hub"
-  #     KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/aegis-mcp/protocol/openid-connect/certs"
   #   ports:
   #     - "4000:4000"
   #   depends_on:
